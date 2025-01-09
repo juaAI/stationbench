@@ -1,0 +1,33 @@
+[tool.poetry]
+name = "stationbench"
+version = "0.1.0"
+description = "A benchmarking tool for weather forecasts based on weather stations"
+authors = ["Jua.ai"]
+license = "MIT"
+readme = "README.md"
+packages = [{include = "stationbench"}]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+xarray = "^2024.1.1"
+pandas = "^2.2.0"
+dask = "^2024.1.1"
+wandb = "^0.16.3"
+plotly = "^5.18.0"
+
+[tool.poetry.group.dev.dependencies]
+black = "^24.1.1"
+ruff = "^0.2.1"
+pytest = "^8.0.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.ruff]
+line-length = 88
+target-version = "py310"
+
+[tool.black]
+line-length = 88
+target-version = ["py310"] 
