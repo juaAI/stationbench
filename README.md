@@ -1,3 +1,5 @@
+TODO: Adjust
+
 # Point-based benchmarking
 Point based benchmarking is split in two steps:
 1. Calculate metrics
@@ -19,21 +21,12 @@ This script computes metrics (RMSE only for now) by comparing forecast data agai
 
 If variable name is not provided, no metrics will be computed for that variable.
 
-### Naming Conventions
-The following naming conventions are suggested:
-- `forecast_loc`: `gs://jua-hindcasts/forecasts/jua/{model}-{start_date}-{end_date}-{region}.zarr` 
-- `output_loc`: `gs://jua-benchmarking/forecasts/{source}/{forecast_loc}-rmse.zarr`, where `{source}` is the source of the forecast, e.g. `jua` or `third_party`
-
-### Commonly used datasets
-- `ground_truth_loc`: `gs://jua-benchmarking/ground_truth/synoptic/synoptic-2023-1h-v3.zarr`
-- high resolution IFS HRES `forecast_loc`: `gs://jua-benchmarking/forecasts/third_party/ifs-fc-2023-0012-6h-2220x4440.zarr`
-
 ### Example usage
 ```bash
-poetry run python benchmarking/point_based/calculate_metrics.py \
-    --forecast_loc gs://jua-hindcasts/forecasts/jua/EPT1-early-2023-03-18-2023-07-31-europe.zarr \
-    --ground_truth_loc gs://jua-benchmarking/ground_truth/synoptic/synoptic-2023-1h-v3.zarr \
-    --start_date 2023-03-18 --end_date 2023-07-31 --output_loc gs://jua-benchmarking/forecasts/jua/EPT1-early-2023-03-18-2023-07-31-europe-rmse.zarr \
+poetry run python stationbench/calculate_metrics.py \
+    --forecast_loc forecast.zarr \
+    --ground_truth_loc ground_truth.zarr \
+    --start_date 2023-01-01 --end_date 2023-12-31 --output_loc forecast-rmse.zarr \
     --region europe --name_10m_wind_speed "10si" --name_2m_temperature "2t"
 ```
 
@@ -57,9 +50,9 @@ The `compare_forecasts.py` script:
 
 ### Example
 ```bash
-poetry run python benchmarking/point_based/compare_forecasts.py \
-    --evaluation_benchmarks_loc gs://jua-benchmarking/forecasts/jua/EPT1-early-2023-03-18-2023-07-31-europe-rmse.zarr \
-    --reference_benchmark_locs '{"HRES": "gs://jua-benchmarking/forecasts/jua/roberto_4_hres_rmse_v3.zarr"}' \
+poetry run python stationbench/compare_forecasts.py \
+    --evaluation_benchmarks_loc forecast-rmse.zarr \
+    --reference_benchmark_locs '{"HRES": "hres-rmse.zarr"}' \
     --regions europe \
-    --run_name test_101
+    --run_name wandb-run-name
 ```
