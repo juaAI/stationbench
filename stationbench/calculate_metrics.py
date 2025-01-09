@@ -7,8 +7,8 @@ import pandas as pd
 import xarray as xr
 from dask.distributed import Client, LocalCluster
 
-from benchmarking.point_based.regions import region_dict, select_region_for_stations
-from modules.utils.jua_logging import init_logging
+from stationbench.utils.regions import region_dict, select_region_for_stations
+from stationbench.utils.logging import init_logging
 
 logger = logging.getLogger(__name__)
 

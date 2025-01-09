@@ -8,15 +8,15 @@ import wandb
 import xarray as xr
 from wandb.errors import CommError
 
-from benchmarking.config.benchmarking_config import Region
-from benchmarking.metrics.utils import format_variable_name
-from benchmarking.point_based.regions import (
+from stationbench.utils.regions import Region
+from stationbench.utils.metrics import format_variable_name
+from stationbench.utils.regions import (
     get_lat_slice,
     get_lon_slice,
     region_dict,
     select_region_for_stations,
 )
-from modules.utils.jua_logging import init_logging
+from stationbench.utils.logging import init_logging
 
 RMSE_THRESHOLD = 20
 

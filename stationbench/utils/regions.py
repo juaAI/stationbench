@@ -1,6 +1,12 @@
+from dataclasses import dataclass
 import xarray as xr
 
-from stationbench.utils.regions import Region
+
+@dataclass
+class Region:
+    lat_slice: list[list[float]]
+    lon_slice: list[list[float]]
+
 
 # TODO: change to single bracket notation, keep for now to use existing Region class
 region_dict = {
