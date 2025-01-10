@@ -1,0 +1,28 @@
+# Python bytecode and cache
+__pycache__/
+*.py[cod]
+
+# Distribution / packaging
+dist/
+build/
+*.egg-info/
+
+# Virtual environments
+.venv/
+venv/
+
+# IDE
+.vscode/
+
+# Testing
+.pytest_cache/
+.coverage
+
+# Project specific
+*.zarr
+
+# Logging
+*.log
+
+# WandB
+wandb/
