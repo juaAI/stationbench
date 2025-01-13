@@ -8,7 +8,25 @@ StationBench is a Python library for benchmarking weather forecasts against weat
 - Support for multiple weather variables (temperature, wind speed, solar radiation)
 - Regional analysis capabilities (Europe, North America, Global, etc.)
 - Integration with Weights & Biases for experiment tracking
-- Efficient processing of large datasets using Dask
+
+## Benchmarking data
+
+The provided benchmarking data is a subset of the [Meteostat](https://dev.meteostat.net/) dataset. It contains weather data from 2018-2024 for 10m wind speed and 2m temperature. The data is provided by the following organizations:
+- Deutscher Wetterdienst
+- NOAA
+- Government of Canada
+- MET Norway
+- European Data Portal
+- Offene Daten Österreich
+
+Source: [Meteostat](https://dev.meteostat.net/) ([CC BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/legalcode))
+
+
+The benchmarking data can be accessed from `ADD_DATA_PATH`.
+
+![Map of weather stations used for benchmarking](docs/stations_2023_map.png)
+
+![Number of stations reporting over time](docs/stations_2018-2024.png)
 
 ## Installation
 
@@ -37,7 +55,6 @@ benchmarks = generate_benchmarks(
 For more detailed examples, see the [examples directory](./examples).
 
 ## Command Line Usage
-
 ```bash
 poetry run python stationbench/calculate_metrics.py \
     --forecast_loc forecast.zarr \
