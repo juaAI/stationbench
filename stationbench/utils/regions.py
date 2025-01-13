@@ -4,37 +4,36 @@ import xarray as xr
 
 @dataclass
 class Region:
-    lat_slice: list[list[float]]
-    lon_slice: list[list[float]]
+    lat_slice: tuple[float, float]
+    lon_slice: tuple[float, float]
 
 
-# TODO: change to single bracket notation, keep for now to use existing Region class
 region_dict = {
     "global": Region(
-        lat_slice=[[-90, 90]],
-        lon_slice=[[-180, 180]],
+        lat_slice=(-90, 90),
+        lon_slice=(-180, 180),
     ),
     "europe": Region(
-        lat_slice=[[36, 72]],
-        lon_slice=[[-15, 45]],
+        lat_slice=(36, 72),
+        lon_slice=(-15, 45),
     ),
     "north-america": Region(
-        lat_slice=[[25, 60]],
-        lon_slice=[[-125, -64]],
+        lat_slice=(25, 60),
+        lon_slice=(-125, -64),
     ),
     "italy": Region(
-        lat_slice=[[36.6, 47.1]],
-        lon_slice=[[6.6, 18.6]],
+        lat_slice=(36.6, 47.1),
+        lon_slice=(6.6, 18.6),
     ),
 }
 
 
 def get_lat_slice(region: Region) -> slice:
-    return slice(region.lat_slice[0][0], region.lat_slice[0][1])
+    return slice(region.lat_slice[0], region.lat_slice[1])
 
 
 def get_lon_slice(region: Region) -> slice:
-    return slice(region.lon_slice[0][0], region.lon_slice[0][1])
+    return slice(region.lon_slice[0], region.lon_slice[1])
 
 
 def select_region_for_stations(
