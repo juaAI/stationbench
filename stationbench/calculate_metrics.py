@@ -158,7 +158,7 @@ def main(args):
         ground_truth=ground_truth,
     )
 
-    # TODO: find out if this is necessary
+    # Clear potential encoding
     for var in benchmarks_ds.variables:
         benchmarks_ds[var].encoding.clear()
     logger.info("Writing benchmarks to %s", args.output_loc)
