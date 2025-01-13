@@ -78,8 +78,8 @@ def preprocess_data(
     ds = ds.sortby("latitude")
 
     # select region
-    lat_slice = slice(region.lat_slice[0][0], region.lat_slice[0][1])
-    lon_slice = slice(region.lon_slice[0][0], region.lon_slice[0][1])
+    lat_slice = slice(region.lat_slice[0], region.lat_slice[1])
+    lon_slice = slice(region.lon_slice[0], region.lon_slice[1])
 
     logger.info(
         "Selecting region: https://linestrings.com/bbox/#%s,%s,%s,%s",
