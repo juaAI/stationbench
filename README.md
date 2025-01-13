@@ -5,6 +5,27 @@ Point based benchmarking is split in two steps:
 1. Calculate metrics
 2. Compare forecasts
 
+## Benchmarking data
+
+The provided benchmarking data is a subset of the [Meteostat](https://dev.meteostat.net/) dataset. It contains weather data from 2018-2024 for 10m wind speed and 2m temperature. The data is provided by the following organizations:
+- Deutscher Wetterdienst
+- NOAA
+- Government of Canada
+- MET Norway
+- European Data Portal
+- Offene Daten Österreich
+
+Source: [Meteostat](https://dev.meteostat.net/) ([CC BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/legalcode))
+
+
+The benchmarking data can be accessed from `ADD_DATA_PATH`.
+
+![Map of weather stations used for benchmarking](docs/stations_2023_map.png)
+
+![Number of stations reporting over time](docs/stations_2018-2024.png)
+
+
+
 ## Calculate Metrics
 This script computes metrics (RMSE only for now) by comparing forecast data against ground truth data for specified time periods and regions. Output are RMSE benchmarks for different variables and lead times in the format of the ground truth data.
 
