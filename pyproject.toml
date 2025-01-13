@@ -23,6 +23,7 @@ black = "^24.1.1"
 ruff = "^0.2.1"
 pytest = "^8.0.0"
 poetry-exec-plugin = "^0.3.6"
+ipykernel = "^6.29.5"
 
 [build-system]
 requires = ["poetry-core"]
