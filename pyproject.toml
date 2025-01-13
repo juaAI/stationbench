@@ -8,7 +8,7 @@ readme = "README.md"
 packages = [{include = "stationbench"}]
 
 [tool.poetry.dependencies]
-python = "^3.11"
+python = "~3.11"
 xarray = "^2024.1.1"
 pandas = "^2.2.0"
 dask = {extras = ["distributed"], version = "^2024.1.1"}
@@ -19,8 +19,7 @@ gcsfs = "^2024.2.0"
 scipy = "^1.12.0"
 
 [tool.poetry.group.dev.dependencies]
-black = "^24.1.1"
-ruff = "^0.2.1"
+ruff = "0.4.2"
 pytest = "^8.0.0"
 
 [build-system]
@@ -29,8 +28,11 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.ruff]
 line-length = 88
-target-version = "py310"
+target-version = "py311"
 
-[tool.black]
-line-length = 88
-target-version = ["py310"] 
+[tool.poetry-exec-plugin.commands]
+format = "ruff format . && ruff check . --fix"
+test = "pytest"
+
+[tool.pytest.ini_options]
+addopts = "--cov=stationbench"
