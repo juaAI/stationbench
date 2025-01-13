@@ -28,9 +28,6 @@ poetry-exec-plugin = "^0.3.6"
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
-[tool.poetry-exec-plugin.commands]
-format = "ruff format . && ruff check . --fix"
-
 [tool.ruff]
 line-length = 88
 target-version = "py311"
