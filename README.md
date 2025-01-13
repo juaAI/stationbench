@@ -1,4 +1,4 @@
-TODO: Adjust
+TODO: Adjust the docs
 
 # Point-based benchmarking
 Point based benchmarking is split in two steps:
