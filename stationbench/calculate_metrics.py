@@ -117,7 +117,7 @@ def generate_benchmarks(
     fc_like_gt = forecast.interp(
         latitude=ground_truth.latitude,
         longitude=ground_truth.longitude,
-        method="linear",  # TODO: decide if we should switch to "nearest"
+        method="linear",
     )
 
     # calculate rmse:
