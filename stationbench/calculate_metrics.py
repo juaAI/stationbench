@@ -78,8 +78,8 @@ def preprocess_data(
     ds = ds.sortby("latitude")
 
     # select region
-    lat_slice = slice(region.lat_slice[0][0], region.lat_slice[0][1])
-    lon_slice = slice(region.lon_slice[0][0], region.lon_slice[0][1])
+    lat_slice = slice(region.lat_slice[0], region.lat_slice[1])
+    lon_slice = slice(region.lon_slice[0], region.lon_slice[1])
 
     logger.info(
         "Selecting region: https://linestrings.com/bbox/#%s,%s,%s,%s",
@@ -117,7 +117,7 @@ def generate_benchmarks(
     fc_like_gt = forecast.interp(
         latitude=ground_truth.latitude,
         longitude=ground_truth.longitude,
-        method="linear",  # TODO: decide if we should switch to "nearest"
+        method="linear",
     )
 
     # calculate rmse:
@@ -158,7 +158,7 @@ def main(args):
         ground_truth=ground_truth,
     )
 
-    # TODO: find out if this is necessary
+    # Clear potential encoding
     for var in benchmarks_ds.variables:
         benchmarks_ds[var].encoding.clear()
     logger.info("Writing benchmarks to %s", args.output_loc)
