@@ -25,9 +25,9 @@ Source: [Meteostat](https://dev.meteostat.net/) ([CC BY-NC 4.0](https://creative
 
 The benchmarking data can be accessed from `ADD_DATA_PATH`.
 
-![Map of weather stations used for benchmarking](docs/stations_2023_map.png)
+![Map of weather stations used for benchmarking](docs/assets/stations_2023_map.png)
 
-![Number of stations reporting over time](docs/stations_2018-2024.png)
+![Number of stations reporting over time](docs/assets/stations_2018-2024.png)
 
 ## Installation
 
