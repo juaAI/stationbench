@@ -4,4 +4,5 @@ Welcome to the StationBench documentation! This guide will help you get started 
 
 ## Contents
 
-- [Basic Usage](tutorial.ipynb) - Basic usage of StationBench
+- [Setup](setup.md) - How to setup StationBench
+- [Tutorial](tutorial.ipynb) - Basic usage of StationBench
