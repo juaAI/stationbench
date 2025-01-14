@@ -4,7 +4,7 @@ StationBench is a Python library for benchmarking weather forecasts against weat
 
 ## Features
 
-- Pre-processed ground truth data from 10,000+ weather stations included in the package
+- Pre-processed ground truth data from 10,000+ weather stations around the world included in the package
 - Calculate RMSE and other metrics between forecasts and ground truth data
 - Support for multiple weather variables (temperature, wind speed, solar radiation)
 - Regional analysis capabilities (Europe, North America, Global, etc.)
