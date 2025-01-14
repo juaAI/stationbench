@@ -75,8 +75,6 @@ poetry run python stationbench/calculate_metrics.py \
 - Variables should include:
   - 10m_wind_speed (or custom name)
   - 2m_temperature (or custom name)
-  - ssrd (or custom name)
-
 ### Ground Truth Data
 - Must include dimensions: station_id, time
 - Must include coordinates: latitude, longitude
