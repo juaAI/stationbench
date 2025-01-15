@@ -171,7 +171,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--ground_truth_loc",
         type=str,
-        required=True,
+        default="https://opendata.jua.sh/stationbench/meteostat_benchmark.zarr",
         help="Location of ground truth data",
     )
     parser.add_argument(
