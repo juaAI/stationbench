@@ -1,5 +1,4 @@
 import argparse
-import ast
 import logging
 from typing import cast
 import json
@@ -384,13 +383,13 @@ def get_parser() -> argparse.ArgumentParser:
 
 def main(args=None):
     """Main function that can be called programmatically or via CLI.
-    
+
     Args:
         args: Either an argparse.Namespace object or a list of command line arguments.
             If None, arguments will be parsed from sys.argv.
     """
     init_logging()
-    
+
     if not isinstance(args, argparse.Namespace):
         parser = get_parser()
         args = parser.parse_args(args)
@@ -406,7 +405,7 @@ def main(args=None):
         raise RuntimeError("Failed to initialize wandb run")
 
     evaluation_benchmarks = xr.open_zarr(args.evaluation_benchmarks_loc)
-    
+
     metrics = PointBasedBenchmarking(
         wandb_run=wandb_run,
     ).generate_metrics(

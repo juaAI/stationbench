@@ -6,6 +6,7 @@ import json
 from .calculate_metrics import main as calculate_metrics_main
 from .compare_forecasts import main as compare_forecasts_main
 
+
 def calculate_metrics(
     forecast_loc: str,
     ground_truth_loc: str = "https://opendata.jua.sh/stationbench/meteostat_benchmark.zarr",
@@ -38,8 +39,9 @@ def calculate_metrics(
         name_10m_wind_speed=name_10m_wind_speed,
         name_2m_temperature=name_2m_temperature,
     )
-    
+
     return calculate_metrics_main(args)
+
 
 def compare_forecasts(
     evaluation_benchmarks_loc: str,
@@ -61,12 +63,14 @@ def compare_forecasts(
             reference_benchmark_locs = json.loads(reference_benchmark_locs)
         except json.JSONDecodeError as e:
             raise ValueError(f"Invalid JSON for reference_benchmark_locs: {e}")
-    
+
     args = argparse.Namespace(
         evaluation_benchmarks_loc=evaluation_benchmarks_loc,
         reference_benchmark_locs=reference_benchmark_locs,
         run_name=run_name,
-        regions=regions if isinstance(regions, list) else [r.strip() for r in regions.split(",")],
+        regions=regions
+        if isinstance(regions, list)
+        else [r.strip() for r in regions.split(",")],
     )
-    
+
     return compare_forecasts_main(args)

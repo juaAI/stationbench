@@ -166,13 +166,13 @@ def get_parser() -> argparse.ArgumentParser:
 
 def main(args=None):
     """Main function that can be called programmatically or via CLI.
-    
+
     Args:
         args: Either an argparse.Namespace object or a list of command line arguments.
             If None, arguments will be parsed from sys.argv.
     """
     init_logging()
-    
+
     if not isinstance(args, argparse.Namespace):
         parser = get_parser()
         args = parser.parse_args(args)
