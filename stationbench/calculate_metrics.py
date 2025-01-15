@@ -25,7 +25,6 @@ def preprocess_data(
     region_name: str,
     wind_speed_name: str | None,
     temperature_name: str | None,
-    ssrd_name: str | None,
     data_type: DataType,
 ) -> xr.Dataset:
     logger.info("preprocessing dataset %s", dataset_loc)
@@ -52,8 +51,6 @@ def preprocess_data(
             ds = ds.rename({wind_speed_name: "10m_wind_speed"})
         if temperature_name:
             ds = ds.rename({temperature_name: "2m_temperature"})
-        if ssrd_name:
-            ds = ds.rename({ssrd_name: "ssrd"})
     elif data_type == DataType.GROUND_TRUTH:
         chunks["time"] = "auto"
         chunks["station_id"] = -1
@@ -65,8 +62,6 @@ def preprocess_data(
             variables_to_keep.append("10m_wind_speed")
         if temperature_name:
             variables_to_keep.append("2m_temperature")
-        if ssrd_name:
-            variables_to_keep.append("ssrd")
         ds = ds[variables_to_keep]
 
     # shift to -180 to 180 if there are longitudes greater than 180
@@ -138,7 +133,6 @@ def main(args):
         region_name=args.region,
         wind_speed_name=args.name_10m_wind_speed,
         temperature_name=args.name_2m_temperature,
-        ssrd_name=args.name_ssrd,
         data_type=DataType.FORECAST,
     )
 
@@ -149,7 +143,6 @@ def main(args):
         region_name=args.region,
         wind_speed_name=args.name_10m_wind_speed,
         temperature_name=args.name_2m_temperature,
-        ssrd_name=args.name_ssrd,
         data_type=DataType.GROUND_TRUTH,
     )
 
@@ -208,9 +201,6 @@ if __name__ == "__main__":
         type=str,
         default=None,
         help="Name of 2m temperature variable",
-    )
-    parser.add_argument(
-        "--name_ssrd", type=str, default=None, help="Name of ssrd variable"
     )
 
     args = parser.parse_args()
