@@ -121,7 +121,61 @@ def generate_benchmarks(
     return rmse.compute()
 
 
-def main(args):
+def main(args=None):
+    """Main function that can be called programmatically or via CLI.
+    
+    Args:
+        args: Either an argparse.Namespace object or a list of command line arguments.
+            If None, arguments will be parsed from sys.argv.
+    """
+    init_logging()
+    if args is None:
+        parser = argparse.ArgumentParser(description="Compute benchmarks")
+        parser.add_argument(
+            "--forecast_loc", type=str, required=True, help="Location of input forecast"
+        )
+        parser.add_argument(
+            "--ground_truth_loc",
+            type=str,
+            default="https://opendata.jua.sh/stationbench/meteostat_benchmark.zarr",
+            help="Location of ground truth data",
+        )
+        parser.add_argument(
+            "--start_date",
+            type=pd.Timestamp,
+            required=True,
+            help="Start date for benchmarking (YYYY-MM-DD)",
+        )
+        parser.add_argument(
+            "--end_date",
+            type=pd.Timestamp,
+            required=True,
+            help="End date for benchmarking (YYYY-MM-DD)",
+        )
+        parser.add_argument(
+            "--output_loc", type=str, required=True, help="Output path for benchmarks"
+        )
+        parser.add_argument("--region", type=str, required=True, help="Region to benchmark")
+        parser.add_argument(
+            "--name_10m_wind_speed",
+            type=str,
+            default=None,
+            help="Name of 10m wind speed variable",
+        )
+        parser.add_argument(
+            "--name_2m_temperature",
+            type=str,
+            default=None,
+            help="Name of 2m temperature variable",
+        )
+        args = parser.parse_args()
+    elif isinstance(args, list):
+        # Parse command line arguments if a list is provided
+        parser = argparse.ArgumentParser(description="Compute benchmarks")
+        # ... same argument definitions as above ...
+        args = parser.parse_args(args)
+    # If args is already a Namespace object, use it directly
+
     cluster = LocalCluster(n_workers=22)
     client = Client(cluster)
     logging.info("Dask dashboard %s", client.dashboard_link)
@@ -160,48 +214,3 @@ def main(args):
     benchmarks_ds.to_zarr(args.output_loc, mode="w")
     logger.info("Finished writing benchmarks to %s", args.output_loc)
     return benchmarks_ds
-
-
-if __name__ == "__main__":
-    init_logging()
-    parser = argparse.ArgumentParser(description="Compute benchmarks")
-    parser.add_argument(
-        "--forecast_loc", type=str, required=True, help="Location of input forecast"
-    )
-    parser.add_argument(
-        "--ground_truth_loc",
-        type=str,
-        default="https://opendata.jua.sh/stationbench/meteostat_benchmark.zarr",
-        help="Location of ground truth data",
-    )
-    parser.add_argument(
-        "--start_date",
-        type=pd.Timestamp,
-        required=True,
-        help="Start date for benchmarking (YYYY-MM-DD)",
-    )
-    parser.add_argument(
-        "--end_date",
-        type=pd.Timestamp,
-        required=True,
-        help="End date for benchmarking (YYYY-MM-DD)",
-    )
-    parser.add_argument(
-        "--output_loc", type=str, required=True, help="Output path for benchmarks"
-    )
-    parser.add_argument("--region", type=str, required=True, help="Region to benchmark")
-    parser.add_argument(
-        "--name_10m_wind_speed",
-        type=str,
-        default=None,
-        help="Name of 10m wind speed variable",
-    )
-    parser.add_argument(
-        "--name_2m_temperature",
-        type=str,
-        default=None,
-        help="Name of 2m temperature variable",
-    )
-
-    args = parser.parse_args()
-    main(args)

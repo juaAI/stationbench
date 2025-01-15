@@ -37,3 +37,7 @@ target-version = "py311"
 [tool.poetry-exec-plugin.commands]
 format = "ruff format . && ruff check . --fix"
 test = "pytest"
+
+[tool.poetry.scripts]
+stationbench-calculate = "stationbench.cli:calculate_metrics"
+stationbench-compare = "stationbench.cli:compare_forecasts"
