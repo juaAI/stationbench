@@ -1,8 +1,8 @@
 [tool.poetry]
 name = "stationbench"
 version = "0.1.0"
-description = "A Python library for benchmarking weather forecasts against weather station data"
-authors = ["leonie.wagner@jua.ai", "andreas.schlueter@jua.ai"]
+description = "A Python package for benchmarking weather forecasts against weather station data"
+authors = ["Jua.ai"]
 license = "MIT"
 readme = "README.md"
 packages = [{include = "stationbench"}]

@@ -1,4 +1,4 @@
-# StationBench v0.1.0
+# StationBench
 
 StationBench is a Python library for benchmarking weather forecasts against weather station data. It provides tools to calculate metrics, visualize results, and compare different forecast models.
 
