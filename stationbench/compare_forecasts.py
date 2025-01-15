@@ -380,7 +380,7 @@ if __name__ == "__main__":
     evaluation_benchmarks = xr.open_zarr(args.evaluation_benchmarks_loc)
     reference_benchmark_locs = ast.literal_eval(args.reference_benchmark_locs)
 
-    wandb_run = wandb.init(id=args.run_name, project="test")
+    wandb_run = wandb.init(id=args.run_name, project="stationbench")
     if wandb_run is None:
         raise RuntimeError("Failed to initialize wandb run")
 
