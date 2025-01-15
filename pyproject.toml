@@ -2,7 +2,7 @@
 name = "stationbench"
 version = "0.1.0"
 description = "A benchmarking tool for weather forecasts based on weather stations"
-authors = ["Jua.ai"]
+authors = ["Jua.ai <support@jua.ai>"]
 license = "MIT"
 readme = "README.md"
 packages = [{include = "stationbench"}]
