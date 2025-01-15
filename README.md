@@ -10,25 +10,6 @@ StationBench is a Python library for benchmarking weather forecasts against weat
 - Regional analysis capabilities (Europe, North America, Global, etc.)
 - Integration with Weights & Biases for experiment tracking
 
-## Benchmarking data
-
-The provided benchmarking data is a subset of the [Meteostat](https://dev.meteostat.net/) dataset. It contains weather data from 2018-2024 for 10m wind speed and 2m temperature. The data is provided by the following organizations:
-- Deutscher Wetterdienst
-- NOAA
-- Government of Canada
-- MET Norway
-- European Data Portal
-- Offene Daten Österreich
-
-Source: [Meteostat](https://dev.meteostat.net/) ([CC BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/legalcode))
-
-
-The benchmarking data can be accessed from `ADD_DATA_PATH`.
-
-![Map of weather stations used for benchmarking](docs/assets/stations_2023_map.png)
-
-![Number of stations reporting over time](docs/assets/stations_2018-2024.png)
-
 ## Installation
 
 Using poetry:
@@ -39,8 +20,8 @@ poetry install
 ## Documentation
 
 Full documentation is available in the [docs/](./docs/) directory:
-- [Getting Started Guide](docs/getting-started.md)
-- [Examples](docs/examples.md)
+- [Setup](docs/setup.md) - How to setup StationBench
+- [Tutorial](docs/tutorial.ipynb) - Basic usage of StationBench
 
 ## Quick Start
 ### Data Format Requirements
@@ -50,7 +31,26 @@ Full documentation is available in the [docs/](./docs/) directory:
 - Variables should include:
   - 10m_wind_speed (or custom name)
   - 2m_temperature (or custom name)
+
 #### Ground Truth Data
+
+Stationbench comes with ready-to-use weather stations from around the world. The benchmarking data is a subset of the [Meteostat](https://dev.meteostat.net/) dataset. It contains weather data from 2018-2024 for 10m wind speed and 2m temperature. The data is provided by the following organizations:
+- Deutscher Wetterdienst
+- NOAA
+- Government of Canada
+- MET Norway
+- European Data Portal
+- Offene Daten Österreich
+
+Source: [Meteostat](https://dev.meteostat.net/) ([CC BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/legalcode))
+
+The benchmarking data can be accessed from `https://opendata.jua.sh/stationbench/meteostat_benchmark.zarr`.
+
+![Map of weather stations used for benchmarking](docs/assets/stations_2023_map.png)
+
+![Number of stations reporting over time](docs/assets/stations_2018-2024.png)
+
+Besides the provided benchmarking data, you can also use your own ground truth data. The ground truth data must be in zarr format and must include the following dimensions and coordinates:
 - Must include dimensions: station_id, time
 - Must include coordinates: latitude, longitude
 
@@ -59,10 +59,10 @@ This script computes metrics (RMSE only for now) by comparing forecast data agai
 
 #### Options
 - `--forecast_loc`: Location of the forecast data (required)
-- `--ground_truth_loc`: Location of the ground truth data (required)
+- `--ground_truth_loc`: Location of the ground truth data (defaults to https://opendata.jua.sh/stationbench/meteostat_benchmark.zarr)
 - `--start_date`: Start date for benchmarking (required)
 - `--end_date`: End date for benchmarking (required)
-- `--output`: Output path for benchmarks (required)
+- `--output_loc`: Output path for benchmarks (required)
 - `--region`: Region to benchmark (see `regions.py` for available regions)
 - `--name_10m_wind_speed`: Name of 10m wind speed variable (optional)
 - `--name_2m_temperature`: Name of 2m temperature variable (optional)
@@ -73,7 +73,6 @@ If variable name is not provided, no metrics will be computed for that variable.
 ```bash
 poetry run python stationbench/calculate_metrics.py \
     --forecast_loc forecast.zarr \
-    --ground_truth_loc ground_truth.zarr \
     --start_date 2023-01-01 --end_date 2023-12-31 --output_loc forecast-rmse.zarr \
     --region europe --name_10m_wind_speed "10si" --name_2m_temperature "2t"
 ```
