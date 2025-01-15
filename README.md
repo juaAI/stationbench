@@ -38,7 +38,6 @@ This script computes metrics (RMSE only for now) by comparing forecast data agai
 - `--region`: Region to benchmark (see `regions.py` for available regions)
 - `--name_10m_wind_speed`: Name of 10m wind speed variable (optional)
 - `--name_2m_temperature`: Name of 2m temperature variable (optional)
-- `--name_ssrd`: Name of ssrd variable (optional)
 
 If variable name is not provided, no metrics will be computed for that variable.
 

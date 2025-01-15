@@ -21,7 +21,6 @@ def test_preprocess_data_forecast(sample_forecast_dataset, tmp_path):
         region_name="europe",  # Assuming this region exists in region_dict
         wind_speed_name="10m_wind_speed",
         temperature_name=None,
-        ssrd_name=None,
         data_type=DataType.FORECAST,
     )
 
@@ -42,7 +41,6 @@ def test_preprocess_data_ground_truth(sample_ground_truth_dataset, tmp_path):
         region_name="europe",  # Assuming this region exists in region_dict
         wind_speed_name="10m_wind_speed",
         temperature_name=None,
-        ssrd_name=None,
         data_type=DataType.GROUND_TRUTH,
     )
 
@@ -82,7 +80,6 @@ def test_preprocess_data_invalid_path(data_type):
             region_name="europe",
             wind_speed_name="10m_wind_speed",
             temperature_name=None,
-            ssrd_name=None,
             data_type=data_type,
         )
 
