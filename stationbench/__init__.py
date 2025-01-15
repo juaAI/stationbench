@@ -1,70 +1,72 @@
-from typing import Optional, Dict, List
-import pandas as pd
+import argparse
+from datetime import datetime
+from typing import Optional, Union
+import json
+
+from .calculate_metrics import main as calculate_metrics_main
+from .compare_forecasts import main as compare_forecasts_main
 
 def calculate_metrics(
     forecast_loc: str,
     ground_truth_loc: str = "https://opendata.jua.sh/stationbench/meteostat_benchmark.zarr",
-    start_date: pd.Timestamp = None,
-    end_date: pd.Timestamp = None,
+    start_date: Union[str, datetime] = None,
+    end_date: Union[str, datetime] = None,
     output_loc: str = None,
-    region: str = None,
+    region: str = "europe",
     name_10m_wind_speed: Optional[str] = None,
-    name_2m_temperature: Optional[str] = None
+    name_2m_temperature: Optional[str] = None,
 ) -> None:
-    """
-    Calculate verification metrics for weather forecasts.
-    
+    """Calculate metrics for a forecast dataset.
+
     Args:
-        forecast_loc: Location of the forecast data
-        ground_truth_loc: Location of the ground truth data
-        start_date: Start date for benchmarking
-        end_date: End date for benchmarking
-        output_loc: Output path for benchmarks
-        region: Region to benchmark
-        name_10m_wind_speed: Name of 10m wind speed variable
-        name_2m_temperature: Name of 2m temperature variable
+        forecast_loc: Location of the forecast dataset
+        ground_truth_loc: Location of the ground truth dataset
+        start_date: Start date for evaluation
+        end_date: End date for evaluation
+        output_loc: Location to save the metrics
+        region: Region to evaluate
+        name_10m_wind_speed: Name of wind speed variable in forecast
+        name_2m_temperature: Name of temperature variable in forecast
     """
-    from .calculate_metrics import main
+    args = argparse.Namespace(
+        forecast_loc=forecast_loc,
+        ground_truth_loc=ground_truth_loc,
+        start_date=start_date,
+        end_date=end_date,
+        output_loc=output_loc,
+        region=region,
+        name_10m_wind_speed=name_10m_wind_speed,
+        name_2m_temperature=name_2m_temperature,
+    )
     
-    class Args:
-        pass
-    
-    args = Args()
-    args.forecast_loc = forecast_loc
-    args.ground_truth_loc = ground_truth_loc
-    args.start_date = pd.Timestamp(start_date)
-    args.end_date = pd.Timestamp(end_date)
-    args.output_loc = output_loc
-    args.region = region
-    args.name_10m_wind_speed = name_10m_wind_speed
-    args.name_2m_temperature = name_2m_temperature
-    
-    main(args)
+    return calculate_metrics_main(args)
 
 def compare_forecasts(
     evaluation_benchmarks_loc: str,
-    reference_benchmark_locs: Dict[str, str],
+    reference_benchmark_locs: Union[str, dict[str, str]],
     run_name: str,
-    regions: List[str]
+    regions: Union[str, list[str]],
 ) -> None:
-    """
-    Compare multiple forecasts and visualize results.
-    
+    """Compare forecast benchmarks.
+
     Args:
-        evaluation_benchmarks_loc: Path to evaluation benchmarks
-        reference_benchmark_locs: Dictionary of reference benchmark locations
-        run_name: W&B run name
-        regions: List of regions to analyze
+        evaluation_benchmarks_loc: Location of the evaluation benchmarks
+        reference_benchmark_locs: Dictionary of reference benchmark locations or JSON string
+        run_name: Name for the W&B run
+        regions: Regions to evaluate (string or list of strings)
     """
-    from .compare_forecasts import main
+    # Handle reference_benchmark_locs as either dict or string
+    if isinstance(reference_benchmark_locs, str):
+        try:
+            reference_benchmark_locs = json.loads(reference_benchmark_locs)
+        except json.JSONDecodeError as e:
+            raise ValueError(f"Invalid JSON for reference_benchmark_locs: {e}")
     
-    class Args:
-        pass
+    args = argparse.Namespace(
+        evaluation_benchmarks_loc=evaluation_benchmarks_loc,
+        reference_benchmark_locs=reference_benchmark_locs,
+        run_name=run_name,
+        regions=regions if isinstance(regions, list) else [r.strip() for r in regions.split(",")],
+    )
     
-    args = Args()
-    args.evaluation_benchmarks_loc = evaluation_benchmarks_loc
-    args.reference_benchmark_locs = str(reference_benchmark_locs)
-    args.run_name = run_name
-    args.regions = ",".join(regions)
-    
-    main(args)
+    return compare_forecasts_main(args)

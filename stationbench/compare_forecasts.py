@@ -394,12 +394,11 @@ def main(args=None):
     if not isinstance(args, argparse.Namespace):
         parser = get_parser()
         args = parser.parse_args(args)
-
-    # Convert string arguments if needed
-    if isinstance(args.reference_benchmark_locs, str):
-        args.reference_benchmark_locs = json.loads(args.reference_benchmark_locs)
-    if isinstance(args.regions, str):
-        args.regions = [r.strip() for r in args.regions.split(",")]
+        # Convert string arguments if needed
+        if isinstance(args.reference_benchmark_locs, str):
+            args.reference_benchmark_locs = json.loads(args.reference_benchmark_locs)
+        if isinstance(args.regions, str):
+            args.regions = [r.strip() for r in args.regions.split(",")]
 
     # Initialize wandb
     wandb_run = wandb.init(id=args.run_name, project="stationbench")
@@ -407,13 +406,12 @@ def main(args=None):
         raise RuntimeError("Failed to initialize wandb run")
 
     evaluation_benchmarks = xr.open_zarr(args.evaluation_benchmarks_loc)
-    reference_benchmark_locs = ast.literal_eval(args.reference_benchmark_locs)
-
+    
     metrics = PointBasedBenchmarking(
         wandb_run=wandb_run,
     ).generate_metrics(
         evaluation_benchmarks=evaluation_benchmarks,
-        reference_benchmark_locs=reference_benchmark_locs,
+        reference_benchmark_locs=args.reference_benchmark_locs,
         region_names=args.regions,
     )
     wandb_run.log(metrics)
