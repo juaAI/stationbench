@@ -68,14 +68,18 @@ def test_generate_benchmarks(sample_forecast_dataset, sample_ground_truth_datase
     assert "metric" in benchmarks.dims
     assert "rmse" in benchmarks.metric
     assert "mbe" in benchmarks.metric
-    
+
     # Check dataset dimensions
     assert set(benchmarks.dims) == {"lead_time", "station_id", "metric"}
-    
+
     # Check data variable dimensions
     assert "10m_wind_speed" in benchmarks.data_vars
     print(f'Variable dimensions: {benchmarks["10m_wind_speed"].dims}')
-    assert set(benchmarks["10m_wind_speed"].dims) == {"lead_time", "station_id", "metric"}
+    assert set(benchmarks["10m_wind_speed"].dims) == {
+        "lead_time",
+        "station_id",
+        "metric",
+    }
 
 
 @pytest.mark.parametrize("data_type", [DataType.FORECAST, DataType.GROUND_TRUTH])

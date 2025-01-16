@@ -106,15 +106,15 @@ def generate_benchmarks(
     ground_truth: xr.Dataset,
 ) -> xr.Dataset:
     """Generate benchmarks by comparing forecast against ground truth.
-    
+
     Computes the following metrics:
     - RMSE: Root Mean Square Error
     - MBE: Mean Bias Error
-    
+
     Args:
         forecast: Forecast dataset
         ground_truth: Ground truth dataset
-    
+
     Returns:
         xr.Dataset with metrics for each variable
     """
@@ -131,11 +131,11 @@ def generate_benchmarks(
 
     logger.info("Calculating metrics")
     metrics_list = []
-    
+
     # Calculate each metric
     for metric in AVAILABLE_METRICS.values():
         metrics_list.append(metric.compute(fc_like_gt, ground_truth))
-    
+
     # Merge all metrics into one dataset
     return xr.merge(metrics_list)
 
