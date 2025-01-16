@@ -1,6 +1,6 @@
 # StationBench
 
-![DOI](https://zenodo.org/badge/914418039.svg)](https://doi.org/10.5281/zenodo.14655944) ![Jua.ai](https://img.shields.io/badge/Jua.ai-AI%20Weather%20Forecasting-0077B5?style=for-the-badge&logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0Ij48cGF0aCBmaWxsPSJ3aGl0ZSIgZD0iTTEyIDJjLTUuNTIgMC0xMCA0LjQ4LTEwIDEwczQuNDggMTAgMTAgMTAgMTAtNC40OCAxMC0xMC00LjQ4LTEwLTEwLTEweiIvPjwvc3ZnPg==)
+![DOI](https://zenodo.org/badge/914418039.svg)](https://doi.org/10.5281/zenodo.14655944) [![Jua.ai](https://img.shields.io/badge/Jua.ai-AI%20Weather%20Forecasting-0077B5?style=for-the-badge&logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0Ij48cGF0aCBmaWxsPSJ3aGl0ZSIgZD0iTTEyIDJjLTUuNTIgMC0xMCA0LjQ4LTEwIDEwczQuNDggMTAgMTAgMTAgMTAtNC40OCAxMC0xMC00LjQ4LTEwLTEwLTEweiIvPjwvc3ZnPg==)](https://www.jua.ai/)
 
 StationBench is a Python library for benchmarking weather forecasts against weather station data. It provides tools to calculate metrics, visualize results, and compare different forecast models.
 
