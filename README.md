@@ -12,9 +12,8 @@ StationBench is a Python library for benchmarking weather forecasts against weat
 
 ## Installation
 
-Using poetry:
 ```bash
-poetry install
+pip install stationbench
 ```
 
 ## Documentation
@@ -24,6 +23,7 @@ Full documentation is available in the [docs/](./docs/) directory:
 - [Tutorial](docs/tutorial.ipynb) - Basic usage of StationBench
 
 ## Quick Start
+
 ### Data Format Requirements
 
 #### Forecast Data
@@ -98,6 +98,58 @@ The `compare_forecasts.py` script:
 ### Example
 ```bash
 poetry run python stationbench/compare_forecasts.py \
+    --evaluation_benchmarks_loc forecast-rmse.zarr \
+    --reference_benchmark_locs '{"HRES": "hres-rmse.zarr"}' \
+    --regions europe \
+    --run_name wandb-run-name
+```
+
+### Usage
+
+StationBench can be used either as a Python package or through command-line interfaces.
+
+#### Python Package Usage
+
+```python
+import stationbench
+
+# Calculate metrics
+stationbench.calculate_metrics(
+    forecast_loc="forecast.zarr",
+    start_date="2023-01-01",
+    end_date="2023-12-31",
+    output_loc="forecast-rmse.zarr",
+    region="europe",
+    name_10m_wind_speed="10si",
+    name_2m_temperature="2t"
+)
+
+# Compare forecasts
+stationbench.compare_forecasts(
+    evaluation_benchmarks_loc="forecast-rmse.zarr",
+    reference_benchmark_locs={"HRES": "hres-rmse.zarr"},
+    run_name="my-comparison",
+    regions=["europe"]
+)
+```
+
+#### Command-Line Usage
+
+Calculate metrics:
+```bash
+stationbench-calculate \
+    --forecast_loc forecast.zarr \
+    --start_date 2023-01-01 \
+    --end_date 2023-12-31 \
+    --output_loc forecast-rmse.zarr \
+    --region europe \
+    --name_10m_wind_speed "10si" \
+    --name_2m_temperature "2t"
+```
+
+Compare forecasts:
+```bash
+stationbench-compare \
     --evaluation_benchmarks_loc forecast-rmse.zarr \
     --reference_benchmark_locs '{"HRES": "hres-rmse.zarr"}' \
     --regions europe \

@@ -1,7 +1,7 @@
 import argparse
-import ast
 import logging
 from typing import cast
+import json
 
 import plotly.express as px
 import wandb
@@ -351,9 +351,9 @@ class PointBasedBenchmarking:
         return ds.mean(dim=["station_id"], skipna=True)
 
 
-if __name__ == "__main__":
-    init_logging()
-    parser = argparse.ArgumentParser(description="Compute metrics and log to W&B")
+def get_parser() -> argparse.ArgumentParser:
+    """Create and return the argument parser."""
+    parser = argparse.ArgumentParser(description="Compare forecast benchmarks")
     parser.add_argument(
         "--evaluation_benchmarks_loc",
         type=str,
@@ -364,31 +364,53 @@ if __name__ == "__main__":
         "--reference_benchmark_locs",
         type=str,
         required=True,
-        help="JSON string of reference benchmark locations, first one for skill score",
+        help="Dictionary of reference benchmark locations",
     )
-    parser.add_argument("--run_name", type=str, required=True, help="W&B run name")
     parser.add_argument(
-        "--regions", type=str, required=True, help="Comma-separated list of regions"
+        "--run_name",
+        type=str,
+        required=True,
+        help="W&B run name",
     )
-    args = parser.parse_args()
+    parser.add_argument(
+        "--regions",
+        type=str,
+        required=True,
+        help="Comma-separated list of regions",
+    )
+    return parser
 
-    # Parse the regions from the comma-separated string
-    region_names = [region.strip() for region in args.regions.split(",")]
 
-    logger.info("regions: %s", region_names)
+def main(args=None):
+    """Main function that can be called programmatically or via CLI.
 
-    evaluation_benchmarks = xr.open_zarr(args.evaluation_benchmarks_loc)
-    reference_benchmark_locs = ast.literal_eval(args.reference_benchmark_locs)
+    Args:
+        args: Either an argparse.Namespace object or a list of command line arguments.
+            If None, arguments will be parsed from sys.argv.
+    """
+    init_logging()
 
+    if not isinstance(args, argparse.Namespace):
+        parser = get_parser()
+        args = parser.parse_args(args)
+        # Convert string arguments if needed
+        if isinstance(args.reference_benchmark_locs, str):
+            args.reference_benchmark_locs = json.loads(args.reference_benchmark_locs)
+        if isinstance(args.regions, str):
+            args.regions = [r.strip() for r in args.regions.split(",")]
+
+    # Initialize wandb
     wandb_run = wandb.init(id=args.run_name, project="stationbench")
     if wandb_run is None:
         raise RuntimeError("Failed to initialize wandb run")
+
+    evaluation_benchmarks = xr.open_zarr(args.evaluation_benchmarks_loc)
 
     metrics = PointBasedBenchmarking(
         wandb_run=wandb_run,
     ).generate_metrics(
         evaluation_benchmarks=evaluation_benchmarks,
-        reference_benchmark_locs=reference_benchmark_locs,
-        region_names=region_names,
+        reference_benchmark_locs=args.reference_benchmark_locs,
+        region_names=args.regions,
     )
     wandb_run.log(metrics)

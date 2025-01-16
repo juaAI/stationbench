@@ -121,49 +121,8 @@ def generate_benchmarks(
     return rmse.compute()
 
 
-def main(args):
-    cluster = LocalCluster(n_workers=22)
-    client = Client(cluster)
-    logging.info("Dask dashboard %s", client.dashboard_link)
-
-    forecast = preprocess_data(
-        dataset_loc=args.forecast_loc,
-        start_date=args.start_date,
-        end_date=args.end_date,
-        region_name=args.region,
-        wind_speed_name=args.name_10m_wind_speed,
-        temperature_name=args.name_2m_temperature,
-        data_type=DataType.FORECAST,
-    )
-
-    ground_truth = preprocess_data(
-        dataset_loc=args.ground_truth_loc,
-        start_date=args.start_date,
-        end_date=args.end_date,
-        region_name=args.region,
-        wind_speed_name=args.name_10m_wind_speed,
-        temperature_name=args.name_2m_temperature,
-        data_type=DataType.GROUND_TRUTH,
-    )
-
-    benchmarks_ds = generate_benchmarks(
-        forecast=forecast,
-        ground_truth=ground_truth,
-    )
-
-    # Clear potential encoding
-    for var in benchmarks_ds.variables:
-        benchmarks_ds[var].encoding.clear()
-    logger.info("Writing benchmarks to %s", args.output_loc)
-    logger.info("Dataset size: %s MB", benchmarks_ds.nbytes / 1e6)
-    logger.info(benchmarks_ds)
-    benchmarks_ds.to_zarr(args.output_loc, mode="w")
-    logger.info("Finished writing benchmarks to %s", args.output_loc)
-    return benchmarks_ds
-
-
-if __name__ == "__main__":
-    init_logging()
+def get_parser() -> argparse.ArgumentParser:
+    """Create and return the argument parser."""
     parser = argparse.ArgumentParser(description="Compute benchmarks")
     parser.add_argument(
         "--forecast_loc", type=str, required=True, help="Location of input forecast"
@@ -202,6 +161,57 @@ if __name__ == "__main__":
         default=None,
         help="Name of 2m temperature variable",
     )
+    return parser
 
-    args = parser.parse_args()
-    main(args)
+
+def main(args=None):
+    """Main function that can be called programmatically or via CLI.
+
+    Args:
+        args: Either an argparse.Namespace object or a list of command line arguments.
+            If None, arguments will be parsed from sys.argv.
+    """
+    init_logging()
+
+    if not isinstance(args, argparse.Namespace):
+        parser = get_parser()
+        args = parser.parse_args(args)
+
+    cluster = LocalCluster(n_workers=22)
+    client = Client(cluster)
+    logging.info("Dask dashboard %s", client.dashboard_link)
+
+    forecast = preprocess_data(
+        dataset_loc=args.forecast_loc,
+        start_date=args.start_date,
+        end_date=args.end_date,
+        region_name=args.region,
+        wind_speed_name=args.name_10m_wind_speed,
+        temperature_name=args.name_2m_temperature,
+        data_type=DataType.FORECAST,
+    )
+
+    ground_truth = preprocess_data(
+        dataset_loc=args.ground_truth_loc,
+        start_date=args.start_date,
+        end_date=args.end_date,
+        region_name=args.region,
+        wind_speed_name=args.name_10m_wind_speed,
+        temperature_name=args.name_2m_temperature,
+        data_type=DataType.GROUND_TRUTH,
+    )
+
+    benchmarks_ds = generate_benchmarks(
+        forecast=forecast,
+        ground_truth=ground_truth,
+    )
+
+    # Clear potential encoding
+    for var in benchmarks_ds.variables:
+        benchmarks_ds[var].encoding.clear()
+    logger.info("Writing benchmarks to %s", args.output_loc)
+    logger.info("Dataset size: %s MB", benchmarks_ds.nbytes / 1e6)
+    logger.info(benchmarks_ds)
+    benchmarks_ds.to_zarr(args.output_loc, mode="w")
+    logger.info("Finished writing benchmarks to %s", args.output_loc)
+    return benchmarks_ds
