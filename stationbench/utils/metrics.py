@@ -12,7 +12,7 @@ class Metric(ABC):
 
 class RMSE(Metric):
     def compute(self, forecast: xr.Dataset, ground_truth: xr.Dataset) -> xr.Dataset:
-        """Compute RMSE between forecast and ground truth.
+        """Compute Root Mean Square Error between forecast and ground truth.
         According to equation 2 in https://arxiv.org/pdf/2308.15560.
         
         For each station (s) and lead time (l):
@@ -35,7 +35,7 @@ class RMSE(Metric):
 
 class MBE(Metric):
     def compute(self, forecast: xr.Dataset, ground_truth: xr.Dataset) -> xr.Dataset:
-        """Compute MBE between forecast and ground truth.
+        """Compute Mean Bias Error between forecast and ground truth.
         According to equation 6 in https://arxiv.org/pdf/2308.15560.
         
         For each station (s) and lead time (l):
