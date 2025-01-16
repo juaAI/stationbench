@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "stationbench"
-version = "0.1.0"
+version = "0.1.1"
 description = "A Python package for benchmarking weather forecasts against weather station data"
 authors = ["Jua.ai <support@jua.ai>"]
 license = "MIT"
