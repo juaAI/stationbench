@@ -9,6 +9,7 @@ from dask.distributed import Client, LocalCluster
 
 from stationbench.utils.regions import region_dict, select_region_for_stations
 from stationbench.utils.logging import init_logging
+from stationbench.utils.metrics import AVAILABLE_METRICS
 
 logger = logging.getLogger(__name__)
 
@@ -104,6 +105,19 @@ def generate_benchmarks(
     forecast: xr.Dataset,
     ground_truth: xr.Dataset,
 ) -> xr.Dataset:
+    """Generate benchmarks by comparing forecast against ground truth.
+    
+    Computes the following metrics:
+    - RMSE: Root Mean Square Error
+    - MBE: Mean Bias Error
+    
+    Args:
+        forecast: Forecast dataset
+        ground_truth: Ground truth dataset
+    
+    Returns:
+        xr.Dataset with metrics for each variable
+    """
     logger.info("Aligning GT with valid time")
     ground_truth = ground_truth.sel(time=forecast.valid_time)
 
@@ -115,10 +129,15 @@ def generate_benchmarks(
         method="linear",
     )
 
-    # calculate rmse:
-    logger.info("Calculating RMSE")
-    rmse = ((fc_like_gt - ground_truth) ** 2).mean("init_time", skipna=True) ** 0.5
-    return rmse.compute()
+    logger.info("Calculating metrics")
+    metrics_list = []
+    
+    # Calculate each metric
+    for metric in AVAILABLE_METRICS.values():
+        metrics_list.append(metric.compute(fc_like_gt, ground_truth))
+    
+    # Merge all metrics into one dataset
+    return xr.merge(metrics_list)
 
 
 def get_parser() -> argparse.ArgumentParser:

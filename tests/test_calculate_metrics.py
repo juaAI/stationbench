@@ -64,10 +64,18 @@ def test_generate_benchmarks(sample_forecast_dataset, sample_ground_truth_datase
     )
 
     assert isinstance(benchmarks, xr.Dataset)
+    # Check for both metrics
+    assert "metric" in benchmarks.dims
+    assert "rmse" in benchmarks.metric
+    assert "mbe" in benchmarks.metric
+    
+    # Check dataset dimensions
+    assert set(benchmarks.dims) == {"lead_time", "station_id", "metric"}
+    
+    # Check data variable dimensions
     assert "10m_wind_speed" in benchmarks.data_vars
-    # Check if RMSE has expected dimensions
-    print(f'benchmarks["10m_wind_speed"].dims: {benchmarks["10m_wind_speed"].dims}')
-    assert set(benchmarks["10m_wind_speed"].dims) == {"lead_time", "station_id"}
+    print(f'Variable dimensions: {benchmarks["10m_wind_speed"].dims}')
+    assert set(benchmarks["10m_wind_speed"].dims) == {"lead_time", "station_id", "metric"}
 
 
 @pytest.mark.parametrize("data_type", [DataType.FORECAST, DataType.GROUND_TRUTH])
@@ -101,21 +109,51 @@ def test_rmse_calculation_matches_manual(
     ground_truth = sample_ground_truth_dataset.copy()
     ground_truth["10m_wind_speed"][:] = 3.0  # Set all ground truth values to 3.0
 
-    # Calculate RMSE using the generate_benchmarks function
-    benchmarks = generate_benchmarks(
+    # Calculate metrics
+    metrics = generate_benchmarks(
         forecast=forecast,
         ground_truth=ground_truth,
     )
 
-    # Manual RMSE calculation
-    # RMSE = sqrt(mean((forecast - ground_truth)²))
-    # In this case: sqrt(mean((5.0 - 3.0)²)) = sqrt(4) = 2.0
+    # Manual RMSE calculation: sqrt(mean((5.0 - 3.0)²)) = sqrt(4) = 2.0
     expected_rmse = 2.0
 
     # Check if the calculated RMSE matches the expected value
     np.testing.assert_allclose(
-        benchmarks["10m_wind_speed"].values,
+        metrics.sel(metric="rmse")["10m_wind_speed"].values,
         expected_rmse,
         rtol=1e-6,
         err_msg="RMSE calculation does not match manual calculation",
+    )
+
+
+def test_mbe_calculation_matches_manual(
+    sample_forecast_dataset, sample_ground_truth_dataset
+):
+    """Test that the MBE calculation matches a manual calculation for a simple case."""
+    # Prepare datasets
+    forecast = sample_forecast_dataset.copy()
+    forecast = forecast.rename({"time": "init_time"})
+    forecast = forecast.rename({"prediction_timedelta": "lead_time"})
+    forecast.coords["valid_time"] = forecast.init_time + forecast.lead_time
+
+    # Set known values
+    forecast["10m_wind_speed"][:] = 5.0
+    ground_truth = sample_ground_truth_dataset.copy()
+    ground_truth["10m_wind_speed"][:] = 3.0
+
+    # Calculate metrics
+    metrics = generate_benchmarks(
+        forecast=forecast,
+        ground_truth=ground_truth,
+    )
+
+    # Manual MBE calculation: mean(forecast - ground_truth) = 5.0 - 3.0 = 2.0
+    expected_mbe = 2.0
+
+    np.testing.assert_allclose(
+        metrics.sel(metric="mbe")["10m_wind_speed"].values,
+        expected_mbe,
+        rtol=1e-6,
+        err_msg="MBE calculation does not match manual calculation",
     )

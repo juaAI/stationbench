@@ -9,7 +9,7 @@ import xarray as xr
 from wandb.errors import CommError
 
 from stationbench.utils.regions import Region
-from stationbench.utils.metrics import format_variable_name
+from stationbench.utils.formatting import format_variable_name
 from stationbench.utils.regions import (
     get_lat_slice,
     get_lon_slice,
@@ -40,6 +40,13 @@ GEO_SCATTER_CONFIGS = {
         "cmap": "Reds",
         "wandb_label": "RMSE",
     },
+    "mbe": {
+        "title_template": "{var}, MBE at lead time {lead_time_title}. Global MBE: {global_mbe:.2f}",
+        "cmin": -5,
+        "cmax": 5,
+        "cmap": "RdBu",
+        "wandb_label": "MBE",
+    },
 }
 
 LINE_PLOT_CONFIGS = {
@@ -52,6 +59,11 @@ LINE_PLOT_CONFIGS = {
         "title_template": "{var}, RMSE ({region})",
         "ylabel": "RMSE",
         "wandb_label": "RMSE",
+    },
+    "mbe": {
+        "title_template": "{var}, MBE ({region})",
+        "ylabel": "Mean Bias Error",
+        "wandb_label": "MBE",
     },
 }
 

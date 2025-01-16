@@ -163,3 +163,12 @@ We welcome contributions! Please see our [CONTRIBUTING.md](CONTRIBUTING.md) for 
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## Metrics
+
+StationBench calculates the following verification metrics at the moment:
+
+- **RMSE (Root Mean Square Error)**: Measures the average magnitude of forecast errors
+- **MBE (Mean Bias Error)**: Measures the average direction and magnitude of forecast bias
+
+We plan to add more benchmarking metrics in the future...
