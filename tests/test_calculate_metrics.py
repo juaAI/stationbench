@@ -1,114 +1,165 @@
-import pytest
 import xarray as xr
-from datetime import date
-from stationbench.calculate_metrics import (
-    DataType,
-    preprocess_data,
-    generate_benchmarks,
-)
 import numpy as np
+from datetime import datetime
+import pytest
+import pandas as pd
+import argparse
+
+from stationbench.calculate_metrics import (
+    prepare_forecast,
+    prepare_stations,
+    interpolate_to_stations,
+    generate_benchmarks,
+    main,
+)
 
 
-def test_preprocess_data_forecast(sample_forecast_dataset, tmp_path):
-    # Save sample dataset to a temporary zarr store
-    forecast_path = tmp_path / "forecast.zarr"
-    sample_forecast_dataset.to_zarr(forecast_path)
+@pytest.fixture
+def sample_forecast():
+    """Create a sample forecast dataset."""
+    times = pd.date_range("2022-01-01", "2022-01-02", freq="24h")  # Just 2 init times
+    lead_times = pd.timedelta_range("0h", "24h", freq="24h")  # Just 2 lead times
+    lats = np.array([45.0, 55.0])  # Just 2 latitudes
+    lons = np.array([0.0, 10.0])  # Just 2 longitudes
 
-    processed_ds = preprocess_data(
-        dataset_loc=str(forecast_path),
-        start_date=date(2024, 1, 1),
-        end_date=date(2024, 1, 2),
-        region_name="europe",  # Assuming this region exists in region_dict
-        wind_speed_name="10m_wind_speed",
-        temperature_name=None,
-        data_type=DataType.FORECAST,
+    ds = xr.Dataset(
+        data_vars={
+            "t2m": (
+                ("time", "prediction_timedelta", "latitude", "longitude"),
+                np.random.randn(len(times), len(lead_times), len(lats), len(lons)),
+            ),
+            "wind": (
+                ("time", "prediction_timedelta", "latitude", "longitude"),
+                np.random.randn(len(times), len(lead_times), len(lats), len(lons)),
+            ),
+        },
+        coords={
+            "time": times,
+            "prediction_timedelta": lead_times,
+            "latitude": lats,
+            "longitude": lons,
+        },
+    )
+    return ds
+
+
+@pytest.fixture
+def sample_stations():
+    """Create a sample stations dataset."""
+    times = pd.date_range("2022-01-01", "2022-01-03", freq="24h")  # Just daily data
+    stations = ["ST1"]  # Just 1 station
+    lats = [50.0]
+    lons = [5.0]
+
+    ds = xr.Dataset(
+        data_vars={
+            "2m_temperature": (
+                ("time", "station_id"),
+                np.random.randn(len(times), len(stations)),
+            ),
+            "10m_wind_speed": (
+                ("time", "station_id"),
+                np.random.randn(len(times), len(stations)),
+            ),
+        },
+        coords={
+            "time": times,
+            "station_id": stations,
+            "latitude": ("station_id", lats),
+            "longitude": ("station_id", lons),
+        },
+    )
+    return ds
+
+
+def test_prepare_forecast(sample_forecast):
+    """Test forecast preparation."""
+    forecast = prepare_forecast(
+        forecast=sample_forecast,
+        region_name="europe",
+        start_date=datetime(2022, 1, 1),
+        end_date=datetime(2022, 1, 3),
+        wind_speed_name="wind",
+        temperature_name="t2m",
     )
 
-    assert isinstance(processed_ds, xr.Dataset)
-    assert "valid_time" in processed_ds.coords
-    assert "10m_wind_speed" in processed_ds.data_vars
+    # Check time handling
+    assert "init_time" in forecast.dims
+    assert "lead_time" in forecast.dims
+    assert "valid_time" in forecast.coords
+
+    # Check region selection
+    assert forecast.latitude.min() >= 36.0
+    assert forecast.latitude.max() <= 72.0
+    assert forecast.longitude.min() >= -15.0
+    assert forecast.longitude.max() <= 45.0
+
+    # Check variable renaming
+    assert "10m_wind_speed" in forecast.data_vars
+    assert "2m_temperature" in forecast.data_vars
+    assert "wind" not in forecast.data_vars
+    assert "t2m" not in forecast.data_vars
 
 
-def test_preprocess_data_ground_truth(sample_ground_truth_dataset, tmp_path):
-    # Save sample dataset to a temporary zarr store
-    gt_path = tmp_path / "ground_truth.zarr"
-    sample_ground_truth_dataset.to_zarr(gt_path)
+def test_prepare_stations(sample_stations):
+    """Test stations preparation."""
+    stations = prepare_stations(stations=sample_stations, region_name="europe")
 
-    processed_ds = preprocess_data(
-        dataset_loc=str(gt_path),
-        start_date=date(2024, 1, 1),
-        end_date=date(2024, 1, 2),
-        region_name="europe",  # Assuming this region exists in region_dict
-        wind_speed_name="10m_wind_speed",
-        temperature_name=None,
-        data_type=DataType.GROUND_TRUTH,
+    # Check region filtering
+    assert stations.latitude.min() >= 36.0
+    assert stations.latitude.max() <= 72.0
+    assert stations.longitude.min() >= -15.0
+    assert stations.longitude.max() <= 45.0
+
+
+def test_full_pipeline(sample_forecast, sample_stations):
+    """Test the full pipeline."""
+    args = argparse.Namespace(
+        forecast=sample_forecast,
+        stations=sample_stations,
+        region="europe",
+        start_date=datetime(2022, 1, 1),
+        end_date=datetime(2022, 1, 2),
+        name_10m_wind_speed="wind",
+        name_2m_temperature="t2m",
+        use_dask=False,
+        output=None,
     )
 
-    assert isinstance(processed_ds, xr.Dataset)
-    assert "10m_wind_speed" in processed_ds.data_vars
-    assert "station_id" in processed_ds.dims
+    benchmarks = main(args)
 
-
-def test_generate_benchmarks(sample_forecast_dataset, sample_ground_truth_dataset):
-    # Prepare datasets for benchmark generation
-    forecast = sample_forecast_dataset.copy()
-    forecast = forecast.rename({"time": "init_time"})
-    forecast = forecast.rename({"prediction_timedelta": "lead_time"})
-    forecast.coords["valid_time"] = forecast.init_time + forecast.lead_time
-
-    ground_truth = sample_ground_truth_dataset.copy()
-
-    benchmarks = generate_benchmarks(
-        forecast=forecast,
-        ground_truth=ground_truth,
-    )
-
-    assert isinstance(benchmarks, xr.Dataset)
+    # Check benchmark results
     assert "10m_wind_speed" in benchmarks.data_vars
-    # Check if RMSE has expected dimensions
-    print(f'benchmarks["10m_wind_speed"].dims: {benchmarks["10m_wind_speed"].dims}')
-    assert set(benchmarks["10m_wind_speed"].dims) == {"lead_time", "station_id"}
+    assert "2m_temperature" in benchmarks.data_vars
+    assert "lead_time" in benchmarks.dims
+    assert "station_id" in benchmarks.dims
 
 
-@pytest.mark.parametrize("data_type", [DataType.FORECAST, DataType.GROUND_TRUTH])
-def test_preprocess_data_invalid_path(data_type):
-    with pytest.raises(Exception):  # Should raise some kind of file not found error
-        preprocess_data(
-            dataset_loc="invalid/path.zarr",
-            start_date=date(2024, 1, 1),
-            end_date=date(2024, 1, 2),
-            region_name="europe",
-            wind_speed_name="10m_wind_speed",
-            temperature_name=None,
-            data_type=data_type,
-        )
-
-
-def test_rmse_calculation_matches_manual(
-    sample_forecast_dataset, sample_ground_truth_dataset
-):
+def test_rmse_calculation_matches_manual(sample_forecast, sample_stations):
     """Test that the RMSE calculation matches a manual calculation for a simple case."""
-    # Prepare a simplified forecast dataset with known values
-    forecast = sample_forecast_dataset.copy()
-    forecast = forecast.rename({"time": "init_time"})
-    forecast = forecast.rename({"prediction_timedelta": "lead_time"})
-    forecast.coords["valid_time"] = forecast.init_time + forecast.lead_time
-
-    # Set known values for forecast
+    # Prepare forecast with known values
+    forecast = prepare_forecast(
+        forecast=sample_forecast,
+        region_name="europe",
+        start_date=datetime(2022, 1, 1),
+        end_date=datetime(2022, 1, 2),
+        wind_speed_name="wind",
+        temperature_name="t2m",
+    )
     forecast["10m_wind_speed"][:] = 5.0  # Set all forecast values to 5.0
 
-    # Prepare ground truth with known values
-    ground_truth = sample_ground_truth_dataset.copy()
-    ground_truth["10m_wind_speed"][:] = 3.0  # Set all ground truth values to 3.0
+    # Prepare stations with known values
+    stations = prepare_stations(stations=sample_stations, region_name="europe")
+    stations["10m_wind_speed"][:] = 3.0  # Set all ground truth values to 3.0
 
-    # Calculate RMSE using the generate_benchmarks function
-    benchmarks = generate_benchmarks(
-        forecast=forecast,
-        ground_truth=ground_truth,
-    )
+    # Interpolate
+    forecast_interp = interpolate_to_stations(forecast, stations)
+
+    # Calculate RMSE using generate_benchmarks
+    benchmarks = generate_benchmarks(forecast=forecast_interp, stations=stations)
 
     # Manual RMSE calculation
-    # RMSE = sqrt(mean((forecast - ground_truth)²))
+    # RMSE = sqrt(mean((forecast - stations)²))
     # In this case: sqrt(mean((5.0 - 3.0)²)) = sqrt(4) = 2.0
     expected_rmse = 2.0
 
@@ -119,3 +170,39 @@ def test_rmse_calculation_matches_manual(
         rtol=1e-6,
         err_msg="RMSE calculation does not match manual calculation",
     )
+
+
+def test_invalid_path():
+    """Test handling of invalid file paths."""
+    with pytest.raises(Exception):  # Should raise some kind of file not found error
+        prepare_forecast(
+            forecast="invalid/path.zarr",
+            region_name="europe",
+            start_date=datetime(2022, 1, 1),
+            end_date=datetime(2022, 1, 3),
+        )
+
+    with pytest.raises(Exception):
+        prepare_stations(stations="invalid/path.zarr", region_name="europe")
+
+
+def test_invalid_region(sample_forecast):
+    """Test handling of invalid region names."""
+    with pytest.raises(KeyError):
+        prepare_forecast(
+            forecast=sample_forecast,
+            region_name="invalid_region",
+            start_date=datetime(2022, 1, 1),
+            end_date=datetime(2022, 1, 3),
+        )
+
+
+def test_invalid_dates(sample_forecast):
+    """Test handling of invalid date ranges."""
+    with pytest.raises(ValueError):
+        prepare_forecast(
+            forecast=sample_forecast,
+            region_name="europe",
+            start_date=datetime(2022, 2, 1),
+            end_date=datetime(2022, 1, 1),
+        )

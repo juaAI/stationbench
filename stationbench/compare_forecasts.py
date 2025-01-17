@@ -267,10 +267,10 @@ class PointBasedBenchmarking:
     ) -> dict[str, wandb.Plotly]:
         config = get_line_plot_config(mode=mode, var=var, region=region)
         x = rmse.lead_time.values.astype("timedelta64[h]").astype(int)
-        line_label = "Jua"
+        line_label = "Forecast"
         skill_score_reference = next(iter(reference_rmses))
 
-        # Prepare data for Jua and reference models
+        # Prepare data for Forecast and reference models
         if mode == "ss":
             ss_rmse = reference_rmses[skill_score_reference]
             plot_data = {
@@ -392,6 +392,8 @@ def main(args=None):
     wandb_run = wandb.init(id=args.run_name, project="stationbench")
     if wandb_run is None:
         raise RuntimeError("Failed to initialize wandb run")
+
+    logger.info("Logging metrics to WandB: %s", wandb_run.url)
 
     evaluation_benchmarks = xr.open_zarr(args.evaluation_benchmarks_loc)
 
