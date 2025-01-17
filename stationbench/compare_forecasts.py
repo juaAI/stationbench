@@ -117,20 +117,6 @@ class PointBasedBenchmarking:
             k: xr.open_zarr(v) for k, v in reference_benchmark_locs.items()
         }
 
-        # move grid to -180 to 180 if needed:
-        if evaluation_benchmarks.longitude.min() < 0:
-            evaluation_benchmarks["longitude"] = xr.where(
-                evaluation_benchmarks["longitude"] > 180,
-                evaluation_benchmarks["longitude"] - 360,
-                evaluation_benchmarks["longitude"],
-            )
-            for k, _ in reference_rmses.items():
-                reference_rmses[k]["longitude"] = xr.where(
-                    reference_rmses[k]["longitude"] > 180,
-                    reference_rmses[k]["longitude"] - 360,
-                    reference_rmses[k]["longitude"],
-                )
-
         # align the reference rmses to the rmse so that we can plot together:
         rmse, *new_rmses = xr.align(
             evaluation_benchmarks, *reference_rmses.values(), join="left"
@@ -249,6 +235,9 @@ class PointBasedBenchmarking:
         :param var: variable to plot
         :param mode: "rmse" or "ss" to plot the RMSE or skill score
         """
+        # Make copies before filtering to avoid modifying the original datasets
+        rmse = rmse.copy()
+        reference_rmses = {k: v.copy() for k, v in reference_rmses.items()}
 
         rmse = rmse.where(rmse[var] < RMSE_THRESHOLD).compute()
         for k, v in reference_rmses.items():
