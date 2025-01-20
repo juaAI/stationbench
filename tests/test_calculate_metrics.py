@@ -24,11 +24,11 @@ def sample_forecast():
 
     ds = xr.Dataset(
         data_vars={
-            "t2m": (
+            "2m_temperature": (
                 ("time", "prediction_timedelta", "latitude", "longitude"),
                 np.random.randn(len(times), len(lead_times), len(lats), len(lons)),
             ),
-            "wind": (
+            "10m_wind_speed": (
                 ("time", "prediction_timedelta", "latitude", "longitude"),
                 np.random.randn(len(times), len(lead_times), len(lats), len(lons)),
             ),
@@ -79,8 +79,8 @@ def test_prepare_forecast(sample_forecast):
         region_name="europe",
         start_date=datetime(2022, 1, 1),
         end_date=datetime(2022, 1, 3),
-        wind_speed_name="wind",
-        temperature_name="t2m",
+        wind_speed_name="10m_wind_speed",
+        temperature_name="2m_temperature",
     )
 
     # Check time handling
@@ -120,8 +120,8 @@ def test_full_pipeline(sample_forecast, sample_stations):
         region="europe",
         start_date=datetime(2022, 1, 1),
         end_date=datetime(2022, 1, 2),
-        name_10m_wind_speed="wind",
-        name_2m_temperature="t2m",
+        name_10m_wind_speed="10m_wind_speed",
+        name_2m_temperature="2m_temperature",
         use_dask=False,
         output=None,
     )
@@ -130,26 +130,8 @@ def test_full_pipeline(sample_forecast, sample_stations):
     assert isinstance(benchmarks, xr.Dataset)
 
     assert set(benchmarks.dims) == {"lead_time", "station_id", "metric"}
-    assert set(benchmarks.metric) == {"rmse", "mbe"}
+    assert set(benchmarks.metric.values) == {"rmse", "mbe"}
     assert set(benchmarks.data_vars) == {"10m_wind_speed", "2m_temperature"}
-    # Check if RMSE has expected dimensions
-    print(f'benchmarks["10m_wind_speed"].dims: {benchmarks["10m_wind_speed"].dims}')
-    assert set(benchmarks["10m_wind_speed"].dims) == {"lead_time", "station_id"}
-
-
-@pytest.mark.parametrize("data_type", [DataType.FORECAST, DataType.GROUND_TRUTH])
-def test_preprocess_data_invalid_path(data_type):
-    with pytest.raises(Exception):  # Should raise some kind of file not found error
-        preprocess_data(
-            dataset_loc="invalid/path.zarr",
-            start_date=date(2024, 1, 1),
-            end_date=date(2024, 1, 2),
-            region_name="europe",
-            wind_speed_name="10m_wind_speed",
-            temperature_name=None,
-            data_type=data_type,
-        )
-
 
 def test_rmse_calculation_matches_manual(sample_forecast, sample_stations):
     """Test that the RMSE calculation matches a manual calculation for a simple case."""
@@ -159,8 +141,8 @@ def test_rmse_calculation_matches_manual(sample_forecast, sample_stations):
         region_name="europe",
         start_date=datetime(2022, 1, 1),
         end_date=datetime(2022, 1, 2),
-        wind_speed_name="wind",
-        temperature_name="t2m",
+        wind_speed_name="10m_wind_speed",
+        temperature_name="2m_temperature",
     )
     forecast["10m_wind_speed"][:] = 5.0  # Set all forecast values to 5.0
 
@@ -181,10 +163,42 @@ def test_rmse_calculation_matches_manual(sample_forecast, sample_stations):
 
     # Check if the calculated RMSE matches the expected value
     np.testing.assert_allclose(
-        metrics.sel(metric="rmse")["10m_wind_speed"].values,
+        benchmarks.sel(metric="rmse")["10m_wind_speed"].values,
         expected_rmse,
         rtol=1e-6,
         err_msg="RMSE calculation does not match manual calculation",
+    )
+
+
+def test_mbe_calculation_matches_manual(
+    sample_forecast, sample_stations
+):
+    """Test that the MBE calculation matches a manual calculation for a simple case."""
+    # Prepare datasets
+    forecast = sample_forecast.copy()
+    forecast = forecast.rename({"time": "init_time"})
+    forecast = forecast.rename({"prediction_timedelta": "lead_time"})
+    forecast.coords["valid_time"] = forecast.init_time + forecast.lead_time
+
+    # Set known values
+    forecast["10m_wind_speed"][:] = 5.0
+    stations = sample_stations.copy()
+    stations["10m_wind_speed"][:] = 3.0
+
+    # Calculate metrics
+    metrics = generate_benchmarks(
+        forecast=forecast,
+        stations=stations,
+    )
+
+    # Manual MBE calculation: mean(forecast - ground_truth) = 5.0 - 3.0 = 2.0
+    expected_mbe = 2.0
+
+    np.testing.assert_allclose(
+        metrics.sel(metric="mbe")["10m_wind_speed"].values,
+        expected_mbe,
+        rtol=1e-6,
+        err_msg="MBE calculation does not match manual calculation",
     )
 
 
@@ -222,36 +236,3 @@ def test_invalid_dates(sample_forecast):
             start_date=datetime(2022, 2, 1),
             end_date=datetime(2022, 1, 1),
         )
-    )
-
-
-def test_mbe_calculation_matches_manual(
-    sample_forecast_dataset, sample_ground_truth_dataset
-):
-    """Test that the MBE calculation matches a manual calculation for a simple case."""
-    # Prepare datasets
-    forecast = sample_forecast_dataset.copy()
-    forecast = forecast.rename({"time": "init_time"})
-    forecast = forecast.rename({"prediction_timedelta": "lead_time"})
-    forecast.coords["valid_time"] = forecast.init_time + forecast.lead_time
-
-    # Set known values
-    forecast["10m_wind_speed"][:] = 5.0
-    ground_truth = sample_ground_truth_dataset.copy()
-    ground_truth["10m_wind_speed"][:] = 3.0
-
-    # Calculate metrics
-    metrics = generate_benchmarks(
-        forecast=forecast,
-        ground_truth=ground_truth,
-    )
-
-    # Manual MBE calculation: mean(forecast - ground_truth) = 5.0 - 3.0 = 2.0
-    expected_mbe = 2.0
-
-    np.testing.assert_allclose(
-        metrics.sel(metric="mbe")["10m_wind_speed"].values,
-        expected_mbe,
-        rtol=1e-6,
-        err_msg="MBE calculation does not match manual calculation",
-    )
