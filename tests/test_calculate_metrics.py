@@ -133,6 +133,7 @@ def test_full_pipeline(sample_forecast, sample_stations):
     assert set(benchmarks.metric.values) == {"rmse", "mbe"}
     assert set(benchmarks.data_vars) == {"10m_wind_speed", "2m_temperature"}
 
+
 def test_rmse_calculation_matches_manual(sample_forecast, sample_stations):
     """Test that the RMSE calculation matches a manual calculation for a simple case."""
     # Prepare forecast with known values
@@ -170,35 +171,40 @@ def test_rmse_calculation_matches_manual(sample_forecast, sample_stations):
     )
 
 
-def test_mbe_calculation_matches_manual(
-    sample_forecast, sample_stations
-):
-    """Test that the MBE calculation matches a manual calculation for a simple case."""
+def test_mbe_calculation(sample_forecast, sample_stations):
+    """Test that MBE calculation correctly handles both magnitude and sign."""
     # Prepare datasets
     forecast = sample_forecast.copy()
     forecast = forecast.rename({"time": "init_time"})
     forecast = forecast.rename({"prediction_timedelta": "lead_time"})
     forecast.coords["valid_time"] = forecast.init_time + forecast.lead_time
-
-    # Set known values
-    forecast["10m_wind_speed"][:] = 5.0
     stations = sample_stations.copy()
+
+    # Test positive bias
+    forecast["10m_wind_speed"][:] = 5.0
     stations["10m_wind_speed"][:] = 3.0
+    metrics = generate_benchmarks(forecast=forecast, stations=stations)
 
-    # Calculate metrics
-    metrics = generate_benchmarks(
-        forecast=forecast,
-        stations=stations,
-    )
-
-    # Manual MBE calculation: mean(forecast - ground_truth) = 5.0 - 3.0 = 2.0
-    expected_mbe = 2.0
-
+    # Check magnitude matches manual calculation
+    expected_mbe = 2.0  # 5.0 - 3.0 = 2.0
     np.testing.assert_allclose(
         metrics.sel(metric="mbe")["10m_wind_speed"].values,
         expected_mbe,
         rtol=1e-6,
-        err_msg="MBE calculation does not match manual calculation",
+        err_msg="MBE calculation does not match manual calculation for positive bias",
+    )
+
+    # Test negative bias
+    forecast["10m_wind_speed"][:] = 1.0
+    metrics = generate_benchmarks(forecast=forecast, stations=stations)
+
+    # Check magnitude matches manual calculation
+    expected_mbe = -2.0  # 1.0 - 3.0 = -2.0
+    np.testing.assert_allclose(
+        metrics.sel(metric="mbe")["10m_wind_speed"].values,
+        expected_mbe,
+        rtol=1e-6,
+        err_msg="MBE calculation does not match manual calculation for negative bias",
     )
 
 

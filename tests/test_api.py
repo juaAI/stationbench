@@ -16,11 +16,11 @@ def sample_forecast():
 
     ds = xr.Dataset(
         data_vars={
-            "t2m": (
+            "2m_temperature": (
                 ("time", "prediction_timedelta", "latitude", "longitude"),
                 np.random.randn(len(times), len(lead_times), len(lats), len(lons)),
             ),
-            "wind": (
+            "10m_wind_speed": (
                 ("time", "prediction_timedelta", "latitude", "longitude"),
                 np.random.randn(len(times), len(lead_times), len(lats), len(lons)),
             ),
@@ -41,8 +41,8 @@ def test_calculate_metrics_with_dataset(sample_forecast, tmp_path):
         forecast=sample_forecast,
         start_date="2023-01-01",
         end_date="2023-01-31",
-        name_10m_wind_speed="wind",
-        name_2m_temperature="t2m",
+        name_10m_wind_speed="10m_wind_speed",
+        name_2m_temperature="2m_temperature",
     )
 
     assert isinstance(metrics, xr.Dataset)
@@ -60,9 +60,11 @@ def test_calculate_metrics_with_path(sample_forecast, tmp_path):
         start_date="2023-01-01",
         end_date="2023-01-31",
         output=str(tmp_path / "metrics.zarr"),
-        name_10m_wind_speed="wind",
-        name_2m_temperature="t2m",
+        name_10m_wind_speed="10m_wind_speed",
+        name_2m_temperature="2m_temperature",
     )
 
     assert isinstance(metrics, xr.Dataset)
     assert (tmp_path / "metrics.zarr").exists()
+    assert "10m_wind_speed" in metrics.data_vars
+    assert "2m_temperature" in metrics.data_vars

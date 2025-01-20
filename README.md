@@ -76,10 +76,9 @@ If variable name is not provided, no metrics will be computed for that variable.
 ```bash
 poetry run python stationbench/calculate_metrics.py \
     --forecast forecast.zarr \
-    --start_date 2023-01-01 --end_date 2023-12-31 --output forecast-rmse.zarr \
+    --start_date 2023-01-01 --end_date 2023-12-31 --output forecast_metrics.zarr \
     --region europe --name_10m_wind_speed "10si" --name_2m_temperature "2t"
 ```
-
 ### Compare forecasts
 
 After generating the metrics, you can use the `compare_forecasts.py` script to compute metrics, create visualizations, and log the results to Weights & Biases (W&B).
@@ -101,8 +100,8 @@ The `compare_forecasts.py` script:
 ### Example
 ```bash
 poetry run python stationbench/compare_forecasts.py \
-    --evaluation_benchmarks_loc forecast-rmse.zarr \
-    --reference_benchmark_locs '{"HRES": "hres-rmse.zarr"}' \
+    --evaluation_benchmarks_loc forecast_metrics.zarr \
+    --reference_benchmark_locs '{"HRES": "hres_metrics.zarr"}' \
     --regions europe \
     --run_name wandb-run-name
 ```
@@ -121,7 +120,7 @@ stationbench.calculate_metrics(
     forecast="forecast.zarr",
     start_date="2023-01-01",
     end_date="2023-12-31",
-    output="forecast-rmse.zarr",
+    output="forecast_metrics.zarr",
     region="europe",
     name_10m_wind_speed="10si",
     name_2m_temperature="2t"
@@ -129,8 +128,8 @@ stationbench.calculate_metrics(
 
 # Compare forecasts
 stationbench.compare_forecasts(
-    evaluation_benchmarks_loc="forecast-rmse.zarr",
-    reference_benchmark_locs={"HRES": "hres-rmse.zarr"},
+    evaluation_benchmarks_loc="forecast_metrics.zarr",
+    reference_benchmark_locs={"HRES": "hres_metrics.zarr"},
     run_name="my-comparison",
     regions=["europe"]
 )
@@ -145,7 +144,7 @@ stationbench-calculate \
     --forecast path/to/forecast.zarr \
     --start_date 2023-01-01 \
     --end_date 2023-12-31 \
-    --output forecast-rmse.zarr \
+    --output forecast_metrics.zarr \
     --region europe \
     --name_10m_wind_speed "10si" \
     --name_2m_temperature "2t"
@@ -158,8 +157,8 @@ For small datasets, it's recommended to run without Dask. For large datasets
 Compare forecasts:
 ```bash
 stationbench-compare \
-    --evaluation_benchmarks_loc forecast-rmse.zarr \
-    --reference_benchmark_locs '{"HRES": "hres-rmse.zarr"}' \
+    --evaluation_benchmarks_loc forecast_metrics.zarr \
+    --reference_benchmark_locs '{"HRES": "hres_metrics.zarr"}' \
     --regions europe \
     --run_name wandb-run-name
 ```
@@ -174,9 +173,10 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## Metrics
 
-StationBench calculates the following verification metrics at the moment:
+StationBench calculates the following verification metrics:
 
-- **RMSE (Root Mean Square Error)**: Measures the average magnitude of forecast errors
-- **MBE (Mean Bias Error)**: Measures the average direction and magnitude of forecast bias
+- **RMSE (Root Mean Square Error)**: Measures the average magnitude of forecast errors, giving greater weight to larger errors
+- **MBE (Mean Bias Error)**: Measures the average direction and magnitude of forecast bias. Positive values indicate the forecast tends to overpredict, while negative values indicate underprediction.
 
 We plan to add more benchmarking metrics in the future...
+

@@ -277,13 +277,13 @@ def main(args=None) -> xr.Dataset:
             benchmarks_ds[var].encoding.clear()
         logger.info("Writing benchmarks to %s", args.output)
         logger.info("Dataset size: %s MB", benchmarks_ds.nbytes / 1e6)
-        
+
         # Explicitly rechunk all data variables and coordinates
         chunks = {}
         for dim in benchmarks_ds.dims:
             chunks[dim] = -1  # -1 means one chunk for the whole dimension
         benchmarks_ds = benchmarks_ds.chunk(chunks)
-        
+
         benchmarks_ds.to_zarr(args.output, mode="w")
         logger.info("Finished writing benchmarks to %s", args.output)
 
