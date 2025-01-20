@@ -2,6 +2,7 @@ import pytest
 import xarray as xr
 import numpy as np
 import pandas as pd
+from unittest.mock import patch
 
 
 @pytest.fixture
@@ -32,7 +33,7 @@ def sample_forecast_dataset():
 
 
 @pytest.fixture
-def sample_ground_truth_dataset():
+def sample_stations_dataset():
     # Create a small synthetic ground truth dataset
     times = pd.date_range("2024-01-01", "2024-01-03", freq="h")
     stations = range(3)
@@ -52,3 +53,10 @@ def sample_ground_truth_dataset():
         },
     )
     return ds
+
+
+@pytest.fixture
+def mock_wandb():
+    """Mock W&B for testing."""
+    with patch("wandb.init"), patch("wandb.log"), patch("wandb.finish"):
+        yield
