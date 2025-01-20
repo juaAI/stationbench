@@ -2,42 +2,52 @@ import argparse
 from datetime import datetime
 from typing import Optional, Union
 import json
+import xarray as xr
 
 from .calculate_metrics import main as calculate_metrics_main
 from .compare_forecasts import main as compare_forecasts_main
+from .utils.io import load_dataset
 
 
 def calculate_metrics(
-    forecast_loc: str,
-    ground_truth_loc: str = "https://opendata.jua.sh/stationbench/meteostat_benchmark.zarr",
+    forecast: Union[str, xr.Dataset],
+    stations: Union[
+        str, xr.Dataset
+    ] = "https://opendata.jua.sh/stationbench/meteostat_benchmark.zarr",
     start_date: Union[str, datetime] = None,
     end_date: Union[str, datetime] = None,
-    output_loc: str = None,
+    output: Optional[str] = None,
     region: str = "europe",
     name_10m_wind_speed: Optional[str] = None,
     name_2m_temperature: Optional[str] = None,
-) -> None:
+    use_dask: bool = False,
+) -> xr.Dataset:
     """Calculate metrics for a forecast dataset.
 
     Args:
-        forecast_loc: Location of the forecast dataset
-        ground_truth_loc: Location of the ground truth dataset
+        forecast: Forecast dataset or path
+        stations: Ground truth dataset or path
         start_date: Start date for evaluation
         end_date: End date for evaluation
-        output_loc: Location to save the metrics
+        output: Optional path to save results
         region: Region to evaluate
-        name_10m_wind_speed: Name of wind speed variable in forecast
-        name_2m_temperature: Name of temperature variable in forecast
+        name_10m_wind_speed: Name of wind speed variable
+        name_2m_temperature: Name of temperature variable
+        use_dask: Whether to use Dask for parallel computation (slower for small datasets)
+
+    Returns:
+        xr.Dataset: Calculated metrics
     """
     args = argparse.Namespace(
-        forecast_loc=forecast_loc,
-        ground_truth_loc=ground_truth_loc,
+        forecast=load_dataset(forecast),
+        stations=load_dataset(stations),
         start_date=start_date,
         end_date=end_date,
-        output_loc=output_loc,
+        output=output,
         region=region,
         name_10m_wind_speed=name_10m_wind_speed,
         name_2m_temperature=name_2m_temperature,
+        use_dask=use_dask,
     )
 
     return calculate_metrics_main(args)
