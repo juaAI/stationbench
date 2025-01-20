@@ -389,11 +389,16 @@ def main(args=None):
             args.regions = [r.strip() for r in args.regions.split(",")]
 
     # Initialize wandb
-    wandb_run = wandb.init(id=args.run_name, project="stationbench")
-    if wandb_run is None:
-        raise RuntimeError("Failed to initialize wandb run")
+    try:
+        wandb_run = wandb.init(id=args.run_name, project="stationbench")
+    except Exception as e:
+        logger.warning(f"Failed to initialize wandb: {e}")
+        wandb_run = None
 
-    logger.info("Logging metrics to WandB: %s", wandb_run.url)
+    logger.info(
+        "Logging metrics to WandB: %s",
+        wandb_run.url if wandb_run else "WandB not available",
+    )
 
     evaluation_benchmarks = xr.open_zarr(args.evaluation_benchmarks_loc)
 
@@ -404,4 +409,5 @@ def main(args=None):
         reference_benchmark_locs=args.reference_benchmark_locs,
         region_names=args.regions,
     )
-    wandb_run.log(metrics)
+    if wandb_run is not None:
+        wandb_run.log(metrics)

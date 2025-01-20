@@ -44,26 +44,37 @@ def test_compare_forecasts_cli(tmp_path):
     ref_path = tmp_path / "ref.zarr"
 
     # Create sample benchmark data
-    create_sample_benchmarks(eval_path)  # Helper function to create test data
+    create_sample_benchmarks(eval_path)
     create_sample_benchmarks(ref_path)
 
     ref_locs = json.dumps({"reference": str(ref_path)})
 
-    with patch(
-        "sys.argv",
-        [
-            "stationbench-compare",
-            "--evaluation_benchmarks_loc",
-            str(eval_path),
-            "--reference_benchmark_locs",
-            ref_locs,
-            "--run_name",
-            "test-run",
-            "--regions",
-            "europe",
-        ],
+    with (
+        patch("stationbench.cli.compare_forecasts_api") as mock_compare,
+        patch(
+            "sys.argv",
+            [
+                "stationbench-compare",
+                "--evaluation_benchmarks_loc",
+                str(eval_path),
+                "--reference_benchmark_locs",
+                ref_locs,
+                "--run_name",
+                "test-run",
+                "--regions",
+                "europe",
+            ],
+        ),
     ):
         compare_forecasts()
+
+        # Verify the API was called with correct arguments
+        mock_compare.assert_called_once()
+        args = mock_compare.call_args[1]  # Get kwargs
+        assert args["evaluation_benchmarks_loc"] == str(eval_path)
+        assert args["reference_benchmark_locs"] == ref_locs  # Compare with JSON string
+        assert args["run_name"] == "test-run"
+        assert args["regions"] == "europe"
 
 
 @pytest.fixture
