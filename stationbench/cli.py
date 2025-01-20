@@ -1,51 +1,7 @@
 import argparse
-from datetime import datetime
 from stationbench import calculate_metrics as calculate_metrics_api
 from stationbench import compare_forecasts as compare_forecasts_api
-
-
-def get_calculate_parser():
-    parser = argparse.ArgumentParser(
-        description="Calculate forecast verification metrics"
-    )
-    parser.add_argument(
-        "--forecast", type=str, required=True, help="Path to forecast zarr dataset"
-    )
-    parser.add_argument(
-        "--stations",
-        type=str,
-        default="https://opendata.jua.sh/stationbench/meteostat_benchmark.zarr",
-        help="Path to ground truth zarr dataset",
-    )
-    parser.add_argument(
-        "--start_date",
-        type=lambda s: datetime.strptime(s, "%Y-%m-%d"),
-        required=True,
-        help="Start date (YYYY-MM-DD)",
-    )
-    parser.add_argument(
-        "--end_date",
-        type=lambda s: datetime.strptime(s, "%Y-%m-%d"),
-        required=True,
-        help="End date (YYYY-MM-DD)",
-    )
-    parser.add_argument(
-        "--output", type=str, required=True, help="Path to save results"
-    )
-    parser.add_argument(
-        "--region", type=str, default="europe", help="Region to evaluate"
-    )
-    parser.add_argument(
-        "--name_10m_wind_speed",
-        type=str,
-        help="Name of wind speed variable in forecast",
-    )
-    parser.add_argument(
-        "--name_2m_temperature",
-        type=str,
-        help="Name of temperature variable in forecast",
-    )
-    return parser
+from stationbench.calculate_metrics import get_parser as get_calculate_parser
 
 
 def calculate_metrics():

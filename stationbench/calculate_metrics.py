@@ -1,9 +1,8 @@
 import argparse
 import logging
-from datetime import date
+from datetime import date, datetime
 from typing import Union
 
-import pandas as pd
 import xarray as xr
 from dask.distributed import Client, LocalCluster
 
@@ -164,32 +163,37 @@ def generate_benchmarks(
 
 def get_parser() -> argparse.ArgumentParser:
     """Create and return the argument parser."""
-    parser = argparse.ArgumentParser(description="Compute benchmarks")
+    parser = argparse.ArgumentParser(description="Calculate forecast benchmarks")
     parser.add_argument(
-        "--forecast", type=str, required=True, help="Forecast dataset or path"
+        "--forecast", type=str, required=True, help="Path to forecast zarr dataset"
     )
     parser.add_argument(
         "--stations",
         type=str,
         default="https://opendata.jua.sh/stationbench/meteostat_benchmark.zarr",
-        help="Ground truth dataset or path",
+        help="Path to ground truth zarr dataset",
     )
     parser.add_argument(
         "--start_date",
-        type=pd.Timestamp,
+        type=lambda s: datetime.strptime(s, "%Y-%m-%d"),
         required=True,
-        help="Start date for benchmarking (YYYY-MM-DD)",
+        help="Start date (YYYY-MM-DD)",
     )
     parser.add_argument(
         "--end_date",
-        type=pd.Timestamp,
+        type=lambda s: datetime.strptime(s, "%Y-%m-%d"),
         required=True,
-        help="End date for benchmarking (YYYY-MM-DD)",
+        help="End date (YYYY-MM-DD)",
     )
     parser.add_argument(
-        "--output", type=str, required=True, help="Output path for benchmarks"
+        "--output", type=str, required=True, help="Path to save results"
     )
-    parser.add_argument("--region", type=str, required=True, help="Region to benchmark")
+    parser.add_argument(
+        "--region",
+        type=str,
+        default="global",
+        help="Region to benchmark (default: global)",
+    )
     parser.add_argument(
         "--name_10m_wind_speed",
         type=str,
