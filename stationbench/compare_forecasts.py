@@ -129,20 +129,6 @@ class PointBasedBenchmarking:
             k: xr.open_zarr(v) for k, v in reference_benchmark_locs.items()
         }
 
-        # move grid to -180 to 180 if needed:
-        if evaluation_benchmarks.longitude.min() < 0:
-            evaluation_benchmarks["longitude"] = xr.where(
-                evaluation_benchmarks["longitude"] > 180,
-                evaluation_benchmarks["longitude"] - 360,
-                evaluation_benchmarks["longitude"],
-            )
-            for k, _ in reference_rmses.items():
-                reference_rmses[k]["longitude"] = xr.where(
-                    reference_rmses[k]["longitude"] > 180,
-                    reference_rmses[k]["longitude"] - 360,
-                    reference_rmses[k]["longitude"],
-                )
-
         # align the reference rmses to the rmse so that we can plot together:
         rmse, *new_rmses = xr.align(
             evaluation_benchmarks, *reference_rmses.values(), join="left"
@@ -261,6 +247,9 @@ class PointBasedBenchmarking:
         :param var: variable to plot
         :param mode: "rmse" or "ss" to plot the RMSE or skill score
         """
+        # Make copies before filtering to avoid modifying the original datasets
+        rmse = rmse.copy()
+        reference_rmses = {k: v.copy() for k, v in reference_rmses.items()}
 
         rmse = rmse.where(rmse[var] < RMSE_THRESHOLD).compute()
         for k, v in reference_rmses.items():
@@ -290,10 +279,10 @@ class PointBasedBenchmarking:
     ) -> dict[str, wandb.Plotly]:
         config = get_line_plot_config(mode=mode, var=var, region=region)
         x = rmse.lead_time.values.astype("timedelta64[h]").astype(int)
-        line_label = "Jua"
+        line_label = "Forecast"
         skill_score_reference = next(iter(reference_rmses))
 
-        # Prepare data for Jua and reference models
+        # Prepare data for Forecast and reference models
         if mode == "ss":
             ss_rmse = reference_rmses[skill_score_reference]
             plot_data = {
@@ -412,9 +401,16 @@ def main(args=None):
             args.regions = [r.strip() for r in args.regions.split(",")]
 
     # Initialize wandb
-    wandb_run = wandb.init(id=args.run_name, project="stationbench")
-    if wandb_run is None:
-        raise RuntimeError("Failed to initialize wandb run")
+    try:
+        wandb_run = wandb.init(id=args.run_name, project="stationbench")
+    except Exception as e:
+        logger.warning(f"Failed to initialize wandb: {e}")
+        wandb_run = None
+
+    logger.info(
+        "Logging metrics to WandB: %s",
+        wandb_run.url if wandb_run else "WandB not available",
+    )
 
     evaluation_benchmarks = xr.open_zarr(args.evaluation_benchmarks_loc)
 
@@ -425,4 +421,5 @@ def main(args=None):
         reference_benchmark_locs=args.reference_benchmark_locs,
         region_names=args.regions,
     )
-    wandb_run.log(metrics)
+    if wandb_run is not None:
+        wandb_run.log(metrics)

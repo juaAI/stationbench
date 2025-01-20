@@ -1,5 +1,7 @@
 # StationBench
 
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.14671604.svg)](https://doi.org/10.5281/zenodo.14671604) [![Jua.ai](https://img.shields.io/badge/Website-jua.ai-blue)](https://www.jua.ai/) [![LinkedIn](https://img.shields.io/badge/LinkedIn-0077B5?logo=linkedin&logoColor=white)](https://www.linkedin.com/company/juaai/) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
 StationBench is a Python library for benchmarking weather forecasts against weather station data. It provides tools to calculate metrics, visualize results, and compare different forecast models.
 
 ## Features
@@ -58,22 +60,23 @@ Besides the provided benchmarking data, you can also use your own ground truth d
 This script computes metrics (RMSE only for now) by comparing forecast data against ground truth data for specified time periods and regions. Output are RMSE benchmarks for different variables and lead times in the format of the ground truth data.
 
 #### Options
-- `--forecast_loc`: Location of the forecast data (required)
-- `--ground_truth_loc`: Location of the ground truth data (defaults to https://opendata.jua.sh/stationbench/meteostat_benchmark.zarr)
+- `--forecast`: Location of the forecast data (required)
+- `--stations`: Location of the ground truth data (defaults to https://opendata.jua.sh/stationbench/meteostat_benchmark.zarr)
 - `--start_date`: Start date for benchmarking (required)
 - `--end_date`: End date for benchmarking (required)
-- `--output_loc`: Output path for benchmarks (required)
+- `--output`: Output path for benchmarks (required)
 - `--region`: Region to benchmark (see `regions.py` for available regions)
 - `--name_10m_wind_speed`: Name of 10m wind speed variable (optional)
 - `--name_2m_temperature`: Name of 2m temperature variable (optional)
+- `--use_dask`: Enable parallel computation with Dask (recommended for datasets >10GB)
 
 If variable name is not provided, no metrics will be computed for that variable.
 
 #### Example usage
 ```bash
 poetry run python stationbench/calculate_metrics.py \
-    --forecast_loc forecast.zarr \
-    --start_date 2023-01-01 --end_date 2023-12-31 --output_loc forecast-rmse.zarr \
+    --forecast forecast.zarr \
+    --start_date 2023-01-01 --end_date 2023-12-31 --output forecast-rmse.zarr \
     --region europe --name_10m_wind_speed "10si" --name_2m_temperature "2t"
 ```
 
@@ -115,10 +118,10 @@ import stationbench
 
 # Calculate metrics
 stationbench.calculate_metrics(
-    forecast_loc="forecast.zarr",
+    forecast="forecast.zarr",
     start_date="2023-01-01",
     end_date="2023-12-31",
-    output_loc="forecast-rmse.zarr",
+    output="forecast-rmse.zarr",
     region="europe",
     name_10m_wind_speed="10si",
     name_2m_temperature="2t"
@@ -135,17 +138,22 @@ stationbench.compare_forecasts(
 
 #### Command-Line Usage
 
-Calculate metrics:
+Calculate metrics for a forecast dataset:
+
 ```bash
 stationbench-calculate \
-    --forecast_loc forecast.zarr \
+    --forecast path/to/forecast.zarr \
     --start_date 2023-01-01 \
     --end_date 2023-12-31 \
-    --output_loc forecast-rmse.zarr \
+    --output forecast-rmse.zarr \
     --region europe \
     --name_10m_wind_speed "10si" \
     --name_2m_temperature "2t"
+    [--use_dask]  # Optional: Enable parallel computation with Dask
 ```
+
+For small datasets, it's recommended to run without Dask. For large datasets
+(>10GB), enabling Dask with `--use_dask` can improve performance.
 
 Compare forecasts:
 ```bash

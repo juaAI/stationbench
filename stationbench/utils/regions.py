@@ -21,10 +21,6 @@ region_dict = {
         lat_slice=(25, 60),
         lon_slice=(-125, -64),
     ),
-    "italy": Region(
-        lat_slice=(36.6, 47.1),
-        lon_slice=(6.6, 18.6),
-    ),
 }
 
 

@@ -32,7 +32,7 @@ def sample_forecast_dataset():
 
 
 @pytest.fixture
-def sample_ground_truth_dataset():
+def sample_stations_dataset():
     # Create a small synthetic ground truth dataset
     times = pd.date_range("2024-01-01", "2024-01-03", freq="h")
     stations = range(3)
