@@ -5,6 +5,7 @@ import pytest
 import pandas as pd
 import argparse
 
+
 from stationbench.calculate_metrics import (
     prepare_forecast,
     prepare_stations,
@@ -24,11 +25,11 @@ def sample_forecast():
 
     ds = xr.Dataset(
         data_vars={
-            "t2m": (
+            "2m_temperature": (
                 ("time", "prediction_timedelta", "latitude", "longitude"),
                 np.random.randn(len(times), len(lead_times), len(lats), len(lons)),
             ),
-            "wind": (
+            "10m_wind_speed": (
                 ("time", "prediction_timedelta", "latitude", "longitude"),
                 np.random.randn(len(times), len(lead_times), len(lats), len(lons)),
             ),
@@ -79,8 +80,8 @@ def test_prepare_forecast(sample_forecast):
         region_name="europe",
         start_date=datetime(2022, 1, 1),
         end_date=datetime(2022, 1, 3),
-        wind_speed_name="wind",
-        temperature_name="t2m",
+        wind_speed_name="10m_wind_speed",
+        temperature_name="2m_temperature",
     )
 
     # Check time handling
@@ -120,19 +121,18 @@ def test_full_pipeline(sample_forecast, sample_stations):
         region="europe",
         start_date=datetime(2022, 1, 1),
         end_date=datetime(2022, 1, 2),
-        name_10m_wind_speed="wind",
-        name_2m_temperature="t2m",
+        name_10m_wind_speed="10m_wind_speed",
+        name_2m_temperature="2m_temperature",
         use_dask=False,
         output=None,
     )
 
     benchmarks = main(args)
+    assert isinstance(benchmarks, xr.Dataset)
 
-    # Check benchmark results
-    assert "10m_wind_speed" in benchmarks.data_vars
-    assert "2m_temperature" in benchmarks.data_vars
-    assert "lead_time" in benchmarks.dims
-    assert "station_id" in benchmarks.dims
+    assert set(benchmarks.dims) == {"lead_time", "station_id", "metric"}
+    assert set(benchmarks.metric.values) == {"rmse", "mbe"}
+    assert set(benchmarks.data_vars) == {"10m_wind_speed", "2m_temperature"}
 
 
 def test_rmse_calculation_matches_manual(sample_forecast, sample_stations):
@@ -143,8 +143,8 @@ def test_rmse_calculation_matches_manual(sample_forecast, sample_stations):
         region_name="europe",
         start_date=datetime(2022, 1, 1),
         end_date=datetime(2022, 1, 2),
-        wind_speed_name="wind",
-        temperature_name="t2m",
+        wind_speed_name="10m_wind_speed",
+        temperature_name="2m_temperature",
     )
     forecast["10m_wind_speed"][:] = 5.0  # Set all forecast values to 5.0
 
@@ -165,10 +165,47 @@ def test_rmse_calculation_matches_manual(sample_forecast, sample_stations):
 
     # Check if the calculated RMSE matches the expected value
     np.testing.assert_allclose(
-        benchmarks["10m_wind_speed"].values,
+        benchmarks.sel(metric="rmse")["10m_wind_speed"].values,
         expected_rmse,
         rtol=1e-6,
         err_msg="RMSE calculation does not match manual calculation",
+    )
+
+
+def test_mbe_calculation(sample_forecast, sample_stations):
+    """Test that MBE calculation correctly handles both magnitude and sign."""
+    # Prepare datasets
+    forecast = sample_forecast.copy()
+    forecast = forecast.rename({"time": "init_time"})
+    forecast = forecast.rename({"prediction_timedelta": "lead_time"})
+    forecast.coords["valid_time"] = forecast.init_time + forecast.lead_time
+    stations = sample_stations.copy()
+
+    # Test positive bias
+    forecast["10m_wind_speed"][:] = 5.0
+    stations["10m_wind_speed"][:] = 3.0
+    metrics = generate_benchmarks(forecast=forecast, stations=stations)
+
+    # Check magnitude matches manual calculation
+    expected_mbe = 2.0  # 5.0 - 3.0 = 2.0
+    np.testing.assert_allclose(
+        metrics.sel(metric="mbe")["10m_wind_speed"].values,
+        expected_mbe,
+        rtol=1e-6,
+        err_msg="MBE calculation does not match manual calculation for positive bias",
+    )
+
+    # Test negative bias
+    forecast["10m_wind_speed"][:] = 1.0
+    metrics = generate_benchmarks(forecast=forecast, stations=stations)
+
+    # Check magnitude matches manual calculation
+    expected_mbe = -2.0  # 1.0 - 3.0 = -2.0
+    np.testing.assert_allclose(
+        metrics.sel(metric="mbe")["10m_wind_speed"].values,
+        expected_mbe,
+        rtol=1e-6,
+        err_msg="MBE calculation does not match manual calculation for negative bias",
     )
 
 

@@ -9,6 +9,7 @@ from dask.distributed import Client, LocalCluster
 from stationbench.utils.regions import region_dict, select_region_for_stations
 from stationbench.utils.logging import init_logging
 from stationbench.utils.io import load_dataset
+from stationbench.utils.metrics import AVAILABLE_METRICS
 
 logger = logging.getLogger(__name__)
 
@@ -152,13 +153,31 @@ def generate_benchmarks(
     forecast: xr.Dataset,
     stations: xr.Dataset,
 ) -> xr.Dataset:
-    """Calculate benchmark metrics between forecast and stations."""
+    """Generate benchmarks by comparing forecast against ground truth.
+
+    Computes the following metrics:
+    - RMSE: Root Mean Square Error
+    - MBE: Mean Bias Error
+
+    Args:
+        forecast: Forecast dataset
+        stations: Ground truth dataset
+
+    Returns:
+        xr.Dataset with metrics for each variable
+    """
     logger.info("Aligning stations with forecast valid times")
     stations = stations.sel(time=forecast.valid_time)
 
-    logger.info("Calculating RMSE")
-    rmse = ((forecast - stations) ** 2).mean("init_time", skipna=True) ** 0.5
-    return rmse.compute()
+    logger.info("Calculating metrics")
+    metrics_list = []
+
+    # Calculate each metric
+    for metric in AVAILABLE_METRICS.values():
+        metrics_list.append(metric.compute(forecast, stations))
+
+    # Merge all metrics into one dataset
+    return xr.merge(metrics_list)
 
 
 def get_parser() -> argparse.ArgumentParser:
@@ -262,6 +281,13 @@ def main(args=None) -> xr.Dataset:
             benchmarks_ds[var].encoding.clear()
         logger.info("Writing benchmarks to %s", args.output)
         logger.info("Dataset size: %s MB", benchmarks_ds.nbytes / 1e6)
+
+        # Explicitly rechunk all data variables and coordinates
+        chunks = {}
+        for dim in benchmarks_ds.dims:
+            chunks[dim] = -1  # -1 means one chunk for the whole dimension
+        benchmarks_ds = benchmarks_ds.chunk(chunks)
+
         benchmarks_ds.to_zarr(args.output, mode="w")
         logger.info("Finished writing benchmarks to %s", args.output)
 
