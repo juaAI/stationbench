@@ -5,6 +5,7 @@ import pytest
 import pandas as pd
 import argparse
 
+
 from stationbench.calculate_metrics import (
     prepare_forecast,
     prepare_stations,
@@ -158,7 +159,7 @@ def test_rmse_calculation_matches_manual(sample_forecast, sample_stations):
     benchmarks = generate_benchmarks(forecast=forecast_interp, stations=stations)
 
     # Manual RMSE calculation
-    # RMSE = sqrt(mean((forecast - ground_truth)²))
+    # RMSE = sqrt(mean((forecast - stations)²))
     # In this case: sqrt(mean((5.0 - 3.0)²)) = sqrt(4) = 2.0
     expected_rmse = 2.0
 

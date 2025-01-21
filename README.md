@@ -150,7 +150,6 @@ stationbench-calculate \
     --name_2m_temperature "2t"
     [--use_dask]  # Optional: Enable parallel computation with Dask
 ```
-
 For small datasets, it's recommended to run without Dask. For large datasets
 (>10GB), enabling Dask with `--use_dask` can improve performance.
 

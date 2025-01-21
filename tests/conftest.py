@@ -2,6 +2,7 @@ import pytest
 import xarray as xr
 import numpy as np
 import pandas as pd
+from unittest.mock import patch
 
 
 @pytest.fixture
@@ -52,3 +53,10 @@ def sample_stations_dataset():
         },
     )
     return ds
+
+
+@pytest.fixture
+def mock_wandb():
+    """Mock W&B for testing."""
+    with patch("wandb.init"), patch("wandb.log"), patch("wandb.finish"):
+        yield

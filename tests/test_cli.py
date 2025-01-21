@@ -1,4 +1,3 @@
-import pytest
 from unittest.mock import patch
 import json
 from stationbench.cli import calculate_metrics, compare_forecasts
@@ -75,13 +74,6 @@ def test_compare_forecasts_cli(tmp_path):
         assert args["reference_benchmark_locs"] == ref_locs  # Compare with JSON string
         assert args["run_name"] == "test-run"
         assert args["regions"] == "europe"
-
-
-@pytest.fixture
-def mock_wandb():
-    """Mock W&B for testing."""
-    with patch("wandb.init"), patch("wandb.log"), patch("wandb.finish"):
-        yield
 
 
 def create_sample_forecast(path):
