@@ -142,45 +142,46 @@ def prepare_forecast(
     return forecast
 
 
-def interpolate_to_stations(forecast: xr.Dataset, stations: xr.Dataset) -> xr.Dataset:
-    """Interpolate forecast to station locations."""
-    logger.info("Interpolating forecast to station locations")
+def intersect_stations(
+    forecast: xr.Dataset,
+    stations: xr.Dataset,
+    by: str = "station_id",
+    coord_tolerance: float | None = 0.01,
+) -> xr.Dataset:
+    """Match point-based forecast with station locations."""
+    logger.info("Matching point-based forecast with stations")
+    forecast_stations = forecast[by].values
+    stations_ids = stations[by].values
+    common_stations = np.intersect1d(forecast_stations, stations_ids)
 
-    is_point_based = "station_id" in forecast.dims
+    if len(common_stations) == 0:
+        raise ValueError("No common stations found between forecast and stations")
+    logger.info("Found %d common stations", len(common_stations))
 
-    if is_point_based:
-        logger.info("Detected point-based forecast format, no interpolation needed")
-        forecast_stations = forecast.station_id.values
-        stations_ids = stations.station_id.values
-        common_stations = np.intersect1d(forecast_stations, stations_ids)
+    forecast = forecast.sel(**{by: common_stations})
+    stations_subset = stations.sel(**{by: common_stations})
 
-        if len(common_stations) == 0:
-            raise ValueError("No common stations found between forecast and stations")
-
-        logger.info("Found %d common stations", len(common_stations))
-
-        forecast = forecast.sel(station_id=common_stations)
-        stations_subset = stations.sel(station_id=common_stations)
-
-        # Validate coordinates match within tolerance
-        coord_tolerance = 0.01  # ~1km at equator
+    # Validate coordinates match within tolerance
+    if coord_tolerance is not None:
         lat_diff = np.abs(forecast.latitude.values - stations_subset.latitude.values)
         lon_diff = np.abs(forecast.longitude.values - stations_subset.longitude.values)
-
         if np.any(lat_diff > coord_tolerance) or np.any(lon_diff > coord_tolerance):
             raise ValueError(
                 f"Coordinate mismatch between forecast and stations exceeds tolerance of {coord_tolerance} degrees"
             )
 
-        return forecast
-    else:
-        # Grid-based forecast - interpolate to station points
-        forecast_interp = forecast.interp(
-            latitude=stations.latitude,
-            longitude=stations.longitude,
-            method="linear",
-        )
-        return forecast_interp
+    return forecast
+
+
+def interpolate_to_stations(forecast: xr.Dataset, stations: xr.Dataset) -> xr.Dataset:
+    """Interpolate forecast to station locations."""
+    logger.info("Interpolating forecast to station locations")
+    forecast_interp = forecast.interp(
+        latitude=stations.latitude,
+        longitude=stations.longitude,
+        method="linear",
+    )
+    return forecast_interp
 
 
 def generate_benchmarks(
@@ -302,7 +303,13 @@ def main(args=None) -> xr.Dataset:
         args.name_10m_wind_speed,
         args.name_2m_temperature,
     )
-    forecast = interpolate_to_stations(forecast, stations)
+
+    # Either match stations or interpolate based on forecast type
+    is_point_based = "station_id" in forecast.dims
+    if is_point_based:
+        forecast = intersect_stations(forecast, stations)
+    else:
+        forecast = interpolate_to_stations(forecast, stations)
 
     # Calculate benchmarks
     benchmarks_ds = generate_benchmarks(
