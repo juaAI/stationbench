@@ -1,15 +1,14 @@
 import argparse
 import logging
-from typing import cast
 import json
-
-import plotly.express as px
+from typing import cast
 import wandb
 import xarray as xr
 from wandb.errors import CommError
+import pandas as pd
+import numpy as np
 
 from stationbench.utils.regions import Region
-from stationbench.utils.formatting import format_variable_name
 from stationbench.utils.regions import (
     get_lat_slice,
     get_lon_slice,
@@ -17,388 +16,156 @@ from stationbench.utils.regions import (
     select_region_for_stations,
 )
 from stationbench.utils.logging import init_logging
-
-RMSE_THRESHOLD = 20
+from stationbench.utils.plotting import geo_scatter
 
 LEAD_RANGES = {
     "Short term (6-48 hours)": slice("06:00:00", "48:00:00"),
     "Mid term (3-7 days)": slice("72:00:00", "168:00:00"),
 }
 
-GEO_SCATTER_CONFIGS = {
-    "rmse-ss": {
-        "title_template": "{var}, Skill Score [%] at lead time {lead_time_title}",
-        "cmin": -35,
-        "cmax": 35,
-        "cmap": "RdBu",
-        "wandb_label": "skill_score",
-    },
-    "rmse": {
-        "title_template": "{var}, RMSE at lead time {lead_time_title}. Global RMSE: {global_metric:.2f}",
-        "cmin": 0,
-        "cmax": 7,
-        "cmap": "Reds",
-        "wandb_label": "RMSE",
-    },
-    "mbe": {
-        "title_template": "{var}, MBE at lead time {lead_time_title}. Global MBE: {global_metric:.2f}",
-        "cmin": -5,
-        "cmax": 5,
-        "cmap": "RdBu",
-        "wandb_label": "MBE",
-    },
-}
-
-LINE_PLOT_CONFIGS = {
-    "rmse-ss": {
-        "title_template": "{var}, Skill Score ({region})",
-        "ylabel": "Skill Score [%]",
-        "wandb_label": "skill_score",
-    },
-    "rmse": {
-        "title_template": "{var}, RMSE ({region})",
-        "ylabel": "RMSE",
-        "wandb_label": "RMSE",
-    },
-    "mbe": {
-        "title_template": "{var}, MBE ({region})",
-        "ylabel": "Mean Bias Error",
-        "wandb_label": "MBE",
-    },
-}
-
 logger = logging.getLogger(__name__)
 
 
-def get_geo_scatter_config(mode: str, var: str, lead_title: str, global_metric: float):
-    var_str = format_variable_name(var)
-    config = GEO_SCATTER_CONFIGS[mode]
-    title_template = str(config["title_template"])
-    title = title_template.format(
-        var=var_str, lead_time_title=lead_title, global_metric=global_metric
-    )
-    return {
-        "title": title,
-        "cmin": config["cmin"],
-        "cmax": config["cmax"],
-        "cmap": config["cmap"],
-        "wandb_label": config["wandb_label"],
-    }
+def convert_dataset_to_table(
+    dataset: xr.Dataset, model_name: str
+) -> pd.DataFrame:
+    """Convert xarray dataset to pandas DataFrame that is compatible with wandb."""
+    df = dataset.to_dataframe().reset_index()
+    df["prediction_timedelta"] = df["prediction_timedelta"] / np.timedelta64(1, "h")
+    df["model"] = model_name
+    return df
 
+def calculate_metric_skill_score(
+    forecast: xr.Dataset, reference: xr.Dataset, metric: str
+) -> xr.Dataset:
+    """
+    Calculate the skill score between a forecast dataset and a reference dataset.
 
-def get_line_plot_config(mode, var, region):
-    var_str = format_variable_name(var)
-    config = LINE_PLOT_CONFIGS[mode]
-    title_template = str(config["title_template"])
-    title = title_template.format(var=var_str, region=region)
-    return {
-        "title": title,
-        "ylabel": config["ylabel"],
-        "wandb_label": config["wandb_label"],
-    }
+    Parameters:
+        forecast (xr.Dataset): The forecast dataset.
+        reference (xr.Dataset): The reference dataset.
+        metric (str): The metric to calculate the skill score for.
+
+    Returns:
+        xr.Dataset: The skill score dataset
+    """
+    skill_score = 1 - forecast / reference
+    # Properly set up the metric dimension
+    skill_score = skill_score.expand_dims({"metric": [f"{metric}-ss"]})
+    return skill_score
+
+def calculate_skill_scores(
+        temporal_metrics: list[xr.Dataset],
+        spatial_metrics: list[xr.Dataset],
+        model_names: list[str],
+    ) -> tuple[xr.Dataset, xr.Dataset]:
+        """Calculate temporal and spatial skill scores."""
+        base_rmse = temporal_metrics[0].sel(metric="rmse")
+        reference_rmse = temporal_metrics[1].sel(metric="rmse")
+        temporal_ss = calculate_metric_skill_score(
+            base_rmse, reference_rmse, metric="rmse"
+        )
+
+        base_spatial_rmse = spatial_metrics[0].sel(metric="rmse")
+        reference_spatial_rmse = spatial_metrics[1].sel(metric="rmse")
+        spatial_ss = calculate_metric_skill_score(
+            base_spatial_rmse, reference_spatial_rmse, metric="rmse"
+        )
+        return temporal_ss, spatial_ss
 
 
 class PointBasedBenchmarking:
-    def __init__(self, wandb_run: wandb.sdk.wandb_run.Run):
+    def __init__(self, wandb_run: wandb.sdk.wandb_run.Run, region_names: list[str]):
         self.wandb_run = wandb_run
-        artifact_name = f"{wandb_run.id}-temporal_plots"
-        self.incumbent_wandb_artifact = None
-        try:
-            self.incumbent_wandb_artifact = self.wandb_run.use_artifact(
-                f"{artifact_name}:latest"
-            )
-            logger.info("Incumbent artifact %s found...", artifact_name)
-        except CommError:
-            logger.info(
-                "Artifact %s not found, will creating new artifact", artifact_name
-            )
-
-        self.wandb_artifact = wandb.Artifact(artifact_name, type="dataset")
-
-    def generate_metrics(
-        self,
-        evaluation_benchmarks: xr.Dataset,
-        reference_benchmark_locs: dict[str, str],
-        region_names: list[str],
-    ):
-        regions = {
+        self.regions = {
             region_name: region_dict[region_name] for region_name in region_names
         }
-        # open and align reference benchmarks
-        reference_metrics = {
-            k: xr.open_zarr(v) for k, v in reference_benchmark_locs.items()
-        }
 
-        # align the metrics datasets so we can plot together
-        metrics_ds, *ref_metrics = xr.align(
-            evaluation_benchmarks, *reference_metrics.values(), join="left"
-        )
-        reference_metrics = dict(
-            zip(reference_metrics.keys(), ref_metrics, strict=True)
-        )
-
-        logger.info(
-            "Point based benchmarks computed, generating plots and writing to wandb..."
-        )
-        stats: dict[str, wandb.Plotly] = {}
-
-        # Add debugging
-        logger.info(f"Initial metrics_ds dimensions: {metrics_ds.dims}")
-        logger.info(f"Initial metrics: {metrics_ds.metric.values}")
-
-        # Add skill score to metrics
-        ref = reference_metrics[next(iter(reference_benchmark_locs))]
-        metrics_ds = metrics_ds.copy()
-
-        # Create skill score dataset with same structure
-        skill_score_ds = metrics_ds.sel(metric="rmse").copy()
-        for var in metrics_ds.data_vars:
-            skill_score = (
-                1 - metrics_ds[var].sel(metric="rmse") / ref[var].sel(metric="rmse")
-            ) * 100
-            skill_score_ds[var] = skill_score
-
-        # Add rmse-ss to metric coordinate
-        skill_score_ds = skill_score_ds.expand_dims({"metric": ["rmse-ss"]})
-
-        # Merge original and skill score datasets
-        metrics_ds = xr.merge([metrics_ds, skill_score_ds])
-
-        logger.info(f"After merge - dims: {metrics_ds.dims}")
-        logger.info(f"After merge - metrics: {metrics_ds.metric.values}")
-
-        # Generate plots
-        for var in metrics_ds.data_vars:
-            for lead_range_name, lead_range_slice in LEAD_RANGES.items():
-                for mode in ["rmse", "mbe", "rmse-ss"]:
-                    stats |= self._geo_scatter(
-                        metric_ds=metrics_ds,
-                        var=cast(str, var),
-                        lead_range=lead_range_slice,
-                        lead_title=lead_range_name,
-                        mode=mode,
-                    )
-
-            # Generate temporal plots
-            for mode in ["rmse", "mbe", "rmse-ss"]:
-                stats |= self._plot_lines(
-                    metric_ds=metrics_ds,
-                    reference_metrics=reference_metrics,
-                    var=cast(str, var),
-                    regions=regions,
-                    mode=mode,
-                )
-
-        self.wandb_run.log_artifact(self.wandb_artifact).wait()
-        return stats
-
-    def _geo_scatter(
+    def process_temporal_and_spatial_metrics(
         self,
-        metric_ds: xr.Dataset,
-        var: str,
-        lead_range: slice,
-        mode: str,
-        lead_title: str,
-    ) -> dict[str, wandb.Plotly]:
-        """
-        Generate a scatter plot of the metric values on a map
+        benchmark_datasets: dict[str, xr.Dataset],
+    ) -> tuple[xr.Dataset, xr.Dataset]:
+        temporal_metrics = []
+        spatial_metrics = []
+        for dataset in benchmark_datasets.values():
+            temporal_datasets = []
+            spatial_datasets = []
+            
+            for metric in dataset.metric.values:
+                temporal_metrics = []
+                spatial_metrics = []
+                
+                for region in self.config.regions:
+                    temporal_dataset = self.calculate_temporal_metrics(
+                        dataset, region, metric
+                    )
+                    temporal_metrics.append(temporal_dataset)
+
+                    spatial_lead_ranges = []
+                    for lead_range_name in LEAD_RANGES:
+                        lead_range_slice = LEAD_RANGES[lead_range_name]
+                        spatial_lead_range = self.calculate_spatial_metric(
+                            dataset, region, metric, lead_range_slice
+                        )
+                        spatial_lead_ranges.append(spatial_lead_range)
+                    # Concatenate datasets for each lead range
+                    combined_spatial_metric = xr.concat(spatial_lead_ranges, dim="lead_range")
+                    spatial_metrics.append(combined_spatial_metric)
+
+                # Concatenate datasets for each region
+                combined_temporal_metric = xr.concat(temporal_metrics, dim="region")
+                temporal_metrics.append(combined_temporal_metric)
+                combined_spatial_metric = xr.concat(spatial_metrics, dim="region")
+                spatial_metrics.append(combined_spatial_metric)
+
+            # Concatenate datasets for each metric
+            combined_temporal_metric = xr.concat(temporal_metrics, dim="metric")
+            temporal_datasets.append(combined_temporal_metric)
+            combined_spatial_metric = xr.concat(spatial_metrics, dim="metric")
+            spatial_datasets.append(combined_spatial_metric)
+        return temporal_datasets, spatial_datasets
+
+    def calculate_temporal_metrics(
+        self, dataset: xr.Dataset, region: Region, metric: str
+    ) -> xr.Dataset:
+        """Calculate temporal evolution of metrics across regions.
 
         Args:
-            metric_ds: xarray Dataset with metrics (RMSE, MBE, skill score)
-            var: variable to plot
-            lead_range: lead range to plot (slice object)
-            lead_title: lead range title to plot
-            mode: "rmse", "mbe", or "rmse-ss" to plot the RMSE, MBE, or RMSE skill score
+            dataset: Input dataset containing variables
+            regions: List of regions to calculate metrics for
+
+        Returns:
+            Dataset containing weighted metrics for each region
         """
-        # Select the appropriate metric
-        metric_ds = metric_ds[var].sel(metric=mode)
-
-        # Apply threshold only to RMSE
-        metrics_clean = metric_ds.sel(lead_time=lead_range)
-        if mode == "rmse":
-            metrics_clean = metrics_clean.where(metrics_clean < RMSE_THRESHOLD)
-
-        global_metric = float(metrics_clean.mean(skipna=True).compute().values)
-        metrics_averaged = metrics_clean.mean(dim=["lead_time"], skipna=True).dropna(
-            dim="station_id"
-        )
-
-        # Convert to dataframe for plotting
-        metrics_df = metrics_averaged.reset_coords()[
-            ["latitude", "longitude", var]
-        ].to_dataframe()
-
-        geo_scatter_config = get_geo_scatter_config(
-            mode=mode,
-            var=var,
-            global_metric=global_metric,
-            lead_title=lead_title,
-        )
-        if "level" in metrics_averaged.dims:
-            logger.info("***** Selecting level 500")
-            metrics_df = metrics_df.sel(level=500)
-
-        fig = px.scatter_mapbox(
-            metrics_df,
-            lat="latitude",
-            lon="longitude",
-            color=var,
-            width=1200,
-            height=1200,
-            zoom=1,
-            title=geo_scatter_config["title"],
-            color_continuous_scale=geo_scatter_config["cmap"],
-            range_color=(geo_scatter_config["cmin"], geo_scatter_config["cmax"]),
-        )
-        fig.update_layout(mapbox_style="carto-positron")
-        return {
-            f"stations_spatial_metrics/{geo_scatter_config['wandb_label']}/"
-            f"{var} {lead_title}": wandb.Plotly(fig)
-        }
-
-    def _plot_lines(
-        self,
-        metric_ds: xr.Dataset,
-        reference_metrics: dict[str, xr.Dataset],
-        var: str,
-        regions: dict[str, Region],
-        mode: str,
-    ) -> dict[str, wandb.Plotly]:
-        """Generate line plots of the metrics over time.
-
-        Args:
-            metric_ds: Dataset containing the metrics
-            reference_metrics: Dictionary of reference metric datasets
-            var: Variable to plot
-            regions: Dictionary of regions to plot
-            mode: "rmse", "mbe", or "rmse-ss" to plot RMSE, MBE, or skill score
-        """
-        # Make copies before filtering
-        metric_ds = metric_ds.copy()
-        reference_metrics = {k: v.copy() for k, v in reference_metrics.items()}
-
-        # Filter data
-        if mode == "rmse":
-            metric_ds = metric_ds.where(
-                metric_ds[var].sel(metric="rmse") < RMSE_THRESHOLD
-            ).compute()
-            for k, v in reference_metrics.items():
-                reference_metrics[k] = v.where(
-                    v[var].sel(metric="rmse") < RMSE_THRESHOLD
-                ).compute()
-
-        ret: dict[str, wandb.Plotly] = {}
-        for region_name, region in regions.items():
-            ret |= self._plot_line_for_region(
-                region=region_name,
-                var=var,
-                metric_ds=self._select_region(ds=metric_ds, region=region),
-                reference_metrics={
-                    k: self._select_region(ds=v, region=region)
-                    for k, v in reference_metrics.items()
-                },
-                mode=mode,
-            )
-        return ret
-
-    def _plot_line_for_region(
-        self,
-        region: str,
-        var: str,
-        metric_ds: xr.Dataset,
-        mode: str,
-        reference_metrics: dict[str, xr.Dataset],
-    ) -> dict[str, wandb.Plotly]:
-        config = get_line_plot_config(mode=mode, var=var, region=region)
-        x = metric_ds.lead_time.values.astype("timedelta64[h]").astype(int)
-        line_label = "Forecast"
-        skill_score_reference = next(iter(reference_metrics))
-
-        # Prepare data for Forecast and reference models
-        if mode == "rmse-ss":
-            # Use the skill score we already calculated
-            plot_data = {
-                f"{line_label} vs {skill_score_reference}": metric_ds[var]
-                .sel(metric="rmse-ss")
-                .values.tolist()
-            }
-        else:
-            # Use RMSE or MBE directly
-            plot_data = {
-                line_label: metric_ds[var].sel(metric=mode).values.tolist(),
-                **{
-                    ref_name: ref_metric[var].sel(metric=mode).values.tolist()
-                    for ref_name, ref_metric in reference_metrics.items()
-                },
-            }
-
-        # Update or create wandb Table
-        table_name = f"temporal_{var}_{region}"
-        table_data = [
-            (model, lead_time, value)
-            for model, values in plot_data.items()
-            for lead_time, value in zip(x, values, strict=False)
-        ]
-
-        columns = ["model", "lead_time", "value"]
-        if self.incumbent_wandb_artifact:
-            incumbent_table = self.incumbent_wandb_artifact.get(table_name)
-            if incumbent_table:
-                existing_data = [
-                    row
-                    for row in incumbent_table.data
-                    if row[0]
-                    != (
-                        f"{line_label} vs {skill_score_reference}"
-                        if mode == "rmse-ss"
-                        else line_label
-                    )
-                ]
-                table_data = existing_data + table_data
-                columns = incumbent_table.columns
-
-        table = wandb.Table(data=table_data, columns=columns)
-        self.wandb_artifact.add(table, table_name)
-
-        # Create and configure the plot
-        fig = px.line(
-            plot_data,
-            x=x,
-            y=list(plot_data.keys()),
-            title=config["title"],
-            labels={"value": config["ylabel"], "x": "Lead time (hours)"},
-            height=800,
-        )
-        for trace in fig.data:
-            trace.connectgaps = True
-
-        return {
-            f"stations_temporal_metrics/{config['wandb_label']}/"
-            f"{var}/{region}_line_plot": wandb.Plotly(fig)
-        }
+        metric_ds = dataset.sel(metric=metric)
+        metric_ds = self._select_region(metric_ds, region)
+        metric_ds = metric_ds.mean(dim="station_id", skipna=True)
+        metric_ds = metric_ds.expand_dims(region=[region])
+        return metric_ds
+    
+    def calculate_spatial_metric(
+        self, dataset: xr.Dataset, region: Region, metric: str, lead_range_slice: slice
+    ) -> xr.Dataset:
+        """Calculate spatial evolution of metrics across regions."""
+        metric_ds = dataset.sel(metric=metric)
+        metric_ds = self._select_region(metric_ds, region)
+        metric_ds = metric_ds.sel(lead_range=lead_range_slice)
+        return metric_ds
 
     def _select_region(self, ds: xr.Dataset, region: Region) -> xr.Dataset:
         lat_slice = get_lat_slice(region)
         lon_slice = get_lon_slice(region)
         ds = select_region_for_stations(ds, lat_slice, lon_slice)
-
         return ds.mean(dim=["station_id"], skipna=True)
-
 
 def get_parser() -> argparse.ArgumentParser:
     """Create and return the argument parser."""
     parser = argparse.ArgumentParser(description="Compare forecast benchmarks")
     parser.add_argument(
-        "--evaluation_benchmarks_loc",
+        "--benchmark_datasets_locs",
         type=str,
         required=True,
-        help="Path to evaluation benchmarks",
-    )
-    parser.add_argument(
-        "--reference_benchmark_locs",
-        type=str,
-        required=True,
-        help="Dictionary of reference benchmark locations",
+        help="Dictionary of benchmark datasets locations",
     )
     parser.add_argument(
         "--run_name",
@@ -428,8 +195,8 @@ def main(args=None):
         parser = get_parser()
         args = parser.parse_args(args)
         # Convert string arguments if needed
-        if isinstance(args.reference_benchmark_locs, str):
-            args.reference_benchmark_locs = json.loads(args.reference_benchmark_locs)
+        if isinstance(args.benchmark_datasets_locs, str):
+            args.benchmark_datasets_locs = json.loads(args.benchmark_datasets_locs)
         if isinstance(args.regions, str):
             args.regions = [r.strip() for r in args.regions.split(",")]
 
@@ -449,14 +216,47 @@ def main(args=None):
         wandb_run.url if wandb_run else "WandB not available",
     )
 
-    evaluation_benchmarks = xr.open_zarr(args.evaluation_benchmarks_loc)
+    benchmark_datasets = {
+        model_name: xr.open_zarr(benchmark_dataset_loc)
+        for model_name, benchmark_dataset_loc in args.benchmark_datasets_locs.items()
+    }
+    model_names = list(benchmark_datasets.keys())
+    benchmark_datasets = xr.align(benchmark_datasets, strict=True, join="left")
+
 
     metrics = PointBasedBenchmarking(
         wandb_run=wandb_run,
-    ).generate_metrics(
-        evaluation_benchmarks=evaluation_benchmarks,
-        reference_benchmark_locs=args.reference_benchmark_locs,
-        region_names=args.regions,
+        regions=args.regions,
     )
+    
+    temporal_metrics_datasets = metrics.process_temporal_metrics(
+        evaluation_benchmarks=benchmark_datasets,
+    )
+    spatial_metrics_datasets = metrics.process_spatial_metrics(
+        evaluation_benchmarks=benchmark_datasets,
+    )
+
+    temporal_ss, spatial_ss = calculate_skill_scores(
+        temporal_metrics_datasets, spatial_metrics_datasets, model_names
+    )
+
+    # convert temporal metrics to tables
+    temporal_metrics_tables = [convert_dataset_to_table(metric, model_name) for metric, model_name in zip(temporal_metrics_datasets, model_names)]
+    temporal_ss_table = convert_dataset_to_table(temporal_ss, "temporal_ss")
+    temporal_metrics_tables.append(temporal_ss_table)
+
+    # plot spatial metrics
+    spatial_metrics_plots = {}
+    for metric in spatial_metrics_datasets:
+        for region in args.regions:
+            for lead_range_name in LEAD_RANGES:
+                lead_range_slice = LEAD_RANGES[lead_range_name]
+                fig = geo_scatter(metric, region, lead_range_slice)
+                spatial_metrics_plots.update(fig)
+
+
     if wandb_run is not None:
-        wandb_run.log(metrics)
+        tables = [wandb.Table(dataframe=table) for table in temporal_metrics_tables]
+        wandb_run.log(tables)
+        plots = [wandb.Plotly(fig) for fig in spatial_metrics_plots.values()]
+        wandb_run.log(plots)
