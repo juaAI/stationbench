@@ -1,17 +1,17 @@
-import xarray as xr
-import numpy as np
-from datetime import datetime
-import pytest
-import pandas as pd
 import argparse
+from datetime import datetime
 
+import numpy as np
+import pandas as pd
+import pytest
+import xarray as xr
 
 from stationbench.calculate_metrics import (
+    generate_benchmarks,
+    interpolate_to_stations,
+    main,
     prepare_forecast,
     prepare_stations,
-    interpolate_to_stations,
-    generate_benchmarks,
-    main,
 )
 
 
@@ -39,6 +39,37 @@ def sample_forecast():
             "prediction_timedelta": lead_times,
             "latitude": lats,
             "longitude": lons,
+        },
+    )
+    return ds
+
+
+@pytest.fixture
+def sample_point_forecast():
+    """Create a sample point-based forecast dataset."""
+    times = pd.date_range("2022-01-01", "2022-01-02", freq="24h")  # Just 2 init times
+    lead_times = pd.timedelta_range("0h", "24h", freq="24h")  # Just 2 lead times
+    stations = ["ST1", "ST2"]  # Two stations
+    lats = [50.0, 51.0]
+    lons = [5.0, 6.0]
+
+    ds = xr.Dataset(
+        data_vars={
+            "2m_temperature": (
+                ("time", "prediction_timedelta", "station_id"),
+                np.random.randn(len(times), len(lead_times), len(stations)),
+            ),
+            "10m_wind_speed": (
+                ("time", "prediction_timedelta", "station_id"),
+                np.random.randn(len(times), len(lead_times), len(stations)),
+            ),
+        },
+        coords={
+            "time": times,
+            "prediction_timedelta": lead_times,
+            "station_id": stations,
+            "latitude": ("station_id", lats),
+            "longitude": ("station_id", lons),
         },
     )
     return ds
@@ -117,6 +148,30 @@ def test_full_pipeline(sample_forecast, sample_stations):
     """Test the full pipeline."""
     args = argparse.Namespace(
         forecast=sample_forecast,
+        stations=sample_stations,
+        region="europe",
+        start_date=datetime(2022, 1, 1),
+        end_date=datetime(2022, 1, 2),
+        name_10m_wind_speed="10m_wind_speed",
+        name_2m_temperature="2m_temperature",
+        use_dask=False,
+        output=None,
+    )
+
+    benchmarks = main(args)
+    assert isinstance(benchmarks, xr.Dataset)
+
+    assert set(benchmarks.dims) == {"lead_time", "station_id", "metric"}
+    assert set(benchmarks.metric.values) == {"rmse", "mbe"}
+    assert set(benchmarks.data_vars) == {"10m_wind_speed", "2m_temperature"}
+
+
+def test_full_pipeline_with_point_based_forecast(
+    sample_point_forecast, sample_stations
+):
+    """Test the full pipeline."""
+    args = argparse.Namespace(
+        forecast=sample_point_forecast,
         stations=sample_stations,
         region="europe",
         start_date=datetime(2022, 1, 1),
