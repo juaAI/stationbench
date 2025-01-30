@@ -19,6 +19,7 @@ def calculate_metrics():
         region=args.region,
         name_10m_wind_speed=args.name_10m_wind_speed,
         name_2m_temperature=args.name_2m_temperature,
+        use_dask=args.use_dask,
     )
     return metrics
 
