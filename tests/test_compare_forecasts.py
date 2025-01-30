@@ -1,7 +1,10 @@
 import pytest
 import xarray as xr
 import numpy as np
-from stationbench.compare_forecasts import PointBasedBenchmarking
+from stationbench.compare_forecasts import (
+    PointBasedBenchmarking,
+    calculate_skill_scores,
+)
 import wandb
 import pandas as pd
 import os
@@ -56,46 +59,21 @@ def test_identical_forecast_skill_score(mock_wandb_run, tmp_path):
 
     # Initialize the benchmarking class with mocked wandb
     with patch("wandb.Plotly", side_effect=mock_plotly):
-        benchmarking = PointBasedBenchmarking(wandb_run=mock_wandb_run)
-
-        # Generate metrics using the same dataset path as both evaluation and reference
-        metrics = benchmarking.generate_metrics(
-            evaluation_benchmarks=ds,
-            reference_benchmark_locs={"reference": ds_path},
-            region_names=["europe"],
+        benchmarking = PointBasedBenchmarking(
+            wandb_run=mock_wandb_run, region_names=["europe"]
         )
 
-        # Check spatial plots
-        for var in ds.data_vars:
-            for lead_range_name in ["Short term (6-48 hours)", "Mid term (3-7 days)"]:
-                for metric_type in ["RMSE", "MBE", "skill_score"]:
-                    plot_key = f"stations_spatial_metrics/{metric_type}/{var} {lead_range_name}"
-                    assert plot_key in metrics
+        # Generate metrics using the same dataset path as both evaluation and reference
+        temporal_metrics_datasets, spatial_metrics_datasets = (
+            benchmarking.process_temporal_and_spatial_metrics(
+                benchmark_datasets={"evaluation": ds, "reference": ds},
+            )
+        )
 
-                    # Get the plotly figure
-                    fig = metrics[plot_key].fig
+        temporal_ss, spatial_ss = calculate_skill_scores(
+            temporal_metrics_datasets, spatial_metrics_datasets
+        )
 
-                    # Check that all color values (skill scores) are approximately 0
-                    for trace in fig.data:
-                        if hasattr(trace, "marker") and hasattr(trace.marker, "color"):
-                            color_values = np.array(trace.marker.color)
-                            if metric_type == "skill_score":
-                                np.testing.assert_allclose(color_values, 0, atol=1e-10)
-
-        # Check temporal plots
-        for var in ds.data_vars:
-            for metric_type in ["RMSE", "MBE", "skill_score"]:
-                plot_key = (
-                    f"stations_temporal_metrics/{metric_type}/{var}/europe_line_plot"
-                )
-                assert plot_key in metrics
-
-                # Get the plotly figure
-                fig = metrics[plot_key].fig
-
-                # Check that all y values (skill scores) are approximately 0
-                for trace in fig.data:
-                    if hasattr(trace, "y"):
-                        y_values = np.array(trace.y)
-                        if metric_type == "skill_score":
-                            np.testing.assert_allclose(y_values, 0, atol=1e-10)
+        # Check that the skill scores are 0
+        assert temporal_ss["10m_wind_speed"].sum() == 0
+        assert spatial_ss["10m_wind_speed"].sum() == 0

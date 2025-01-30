@@ -283,7 +283,6 @@ def main(args=None) -> xr.Dataset:
         for dim in benchmarks_ds.dims:
             chunks[dim] = -1  # -1 means one chunk for the whole dimension
         benchmarks_ds = benchmarks_ds.chunk(chunks)
-        breakpoint()
         benchmarks_ds.to_zarr(args.output, mode="w")
         logger.info("Finished writing benchmarks to %s", args.output)
 
