@@ -88,7 +88,7 @@ class PointBasedBenchmarking:
 
             for metric in dataset.metric.values:
                 temporal_regions = []
-                temp_dataset = self.calculate_spatial_metric(
+                temp_dataset = self.select_spatial_metric(
                     dataset,
                     metric,
                 )
@@ -129,7 +129,7 @@ class PointBasedBenchmarking:
         metric_ds = metric_ds.expand_dims(region=[region.name])
         return metric_ds
 
-    def calculate_spatial_metric(
+    def select_spatial_metric(
         self,
         dataset: xr.Dataset,
         metric: str,

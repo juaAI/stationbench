@@ -46,7 +46,9 @@ def test_compare_forecasts_cli(tmp_path):
     create_sample_benchmarks(eval_path)
     create_sample_benchmarks(ref_path)
 
-    benchmark_datasets_locs = json.dumps({"evaluation": str(eval_path), "reference": str(ref_path)})
+    benchmark_datasets_locs = json.dumps(
+        {"evaluation": str(eval_path), "reference": str(ref_path)}
+    )
 
     with (
         patch("stationbench.cli.compare_forecasts_api") as mock_compare,
