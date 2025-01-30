@@ -109,12 +109,6 @@ class PointBasedBenchmarking:
             temporal_metric_datasets.append(combined_temporal_metric)
             combined_spatial_metric = xr.concat(spatial_metrics, dim="metric")
             spatial_metric_datasets.append(combined_spatial_metric)
-        logger.info(
-            "Length of temporal metric datasets: %s", len(temporal_metric_datasets)
-        )
-        logger.info(
-            "Length of spatial metric datasets: %s", len(spatial_metric_datasets)
-        )
         return temporal_metric_datasets, spatial_metric_datasets
 
     def calculate_temporal_metrics(
@@ -238,7 +232,9 @@ def main(args=None):
         convert_dataset_to_table(metric, model_name)
         for metric, model_name in zip(temporal_metrics_datasets, model_names)
     ]
-    temporal_ss_table = convert_dataset_to_table(temporal_ss, "temporal_ss")
+    temporal_ss_table = convert_dataset_to_table(
+        temporal_ss, f"{model_names[0]}-vs-{model_names[1]}"
+    )
     temporal_metrics_tables.append(temporal_ss_table)
 
     # plot spatial metrics
@@ -270,18 +266,14 @@ def main(args=None):
             spatial_metrics_plots.update(fig)
 
     if wandb_run is not None:
-        combined_df = pd.concat(temporal_metrics_tables)
-        logger.info("Combined dataframe shape: %s", combined_df.shape)
-        logger.info("Combined dataframe columns: %s", combined_df.columns.tolist())
-        logger.info("Combined dataframe head:\n%s", combined_df.head().to_string())
-        logger.info("Combined dataframe tail:\n%s", combined_df.tail().to_string())
         stats = {
-            "temporal_metrics_table": wandb.Table(
-                dataframe=combined_df, columns=combined_df.columns.tolist()
-            )
+            key: wandb.Plotly(value) for key, value in spatial_metrics_plots.items()
         }
-
         stats.update(
-            {key: wandb.Plotly(value) for key, value in spatial_metrics_plots.items()}
+            {
+                "temporal_metrics_table": wandb.Table(
+                    dataframe=pd.concat(temporal_metrics_tables)
+                )
+            }
         )
         wandb_run.log(stats)
