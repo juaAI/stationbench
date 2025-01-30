@@ -4,20 +4,24 @@ import xarray as xr
 
 @dataclass
 class Region:
+    name: str
     lat_slice: tuple[float, float]
     lon_slice: tuple[float, float]
 
 
 region_dict = {
     "global": Region(
+        name="global",
         lat_slice=(-90, 90),
         lon_slice=(-180, 180),
     ),
     "europe": Region(
+        name="europe",
         lat_slice=(36, 72),
         lon_slice=(-15, 45),
     ),
     "north-america": Region(
+        name="north-america",
         lat_slice=(25, 60),
         lon_slice=(-125, -64),
     ),

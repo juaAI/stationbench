@@ -83,6 +83,7 @@ def prepare_forecast(
             "longitude": "auto",
         },
     )
+
     is_point_based = "station_id" in forecast.dims
 
     # First handle time dimensions
@@ -91,7 +92,6 @@ def prepare_forecast(
         {"time": "init_time", "prediction_timedelta": "lead_time"}
     )
     forecast.coords["valid_time"] = forecast.init_time + forecast.lead_time
-
     # Handle region selection
     region = region_dict[region_name]
     lat_slice = slice(region.lat_slice[0], region.lat_slice[1])
@@ -104,14 +104,14 @@ def prepare_forecast(
         lon_slice.stop,
         lat_slice.stop,
     )
-
     # Longitude wrapping, if needed
     if forecast.longitude.max() > 180:
         logger.info("Converting longitudes from 0-360 to -180-180 range")
         forecast["longitude"] = xr.where(
             forecast.longitude > 180, forecast.longitude - 360, forecast.longitude
         )
-        forecast = forecast.sortby("longitude")
+    forecast = forecast.sortby("longitude")
+    forecast = forecast.sortby("latitude")
 
     # Select region
     if is_point_based:
@@ -130,7 +130,6 @@ def prepare_forecast(
             "Renaming temperature variable from %s to 2m_temperature", temperature_name
         )
         forecast = forecast.rename({temperature_name: "2m_temperature"})
-
     # Drop unwanted variables
     vars_to_drop = [
         var
@@ -211,7 +210,6 @@ def generate_benchmarks(
     # Calculate each metric
     for metric in AVAILABLE_METRICS.values():
         metrics_list.append(metric.compute(forecast, stations))
-
     # Merge all metrics into one dataset
     return xr.merge(metrics_list)
 
@@ -329,7 +327,6 @@ def main(args=None) -> xr.Dataset:
         for dim in benchmarks_ds.dims:
             chunks[dim] = -1  # -1 means one chunk for the whole dimension
         benchmarks_ds = benchmarks_ds.chunk(chunks)
-
         benchmarks_ds.to_zarr(args.output, mode="w")
         logger.info("Finished writing benchmarks to %s", args.output)
 

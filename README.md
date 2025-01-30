@@ -57,7 +57,7 @@ Besides the provided benchmarking data, you can also use your own ground truth d
 - Must include coordinates: latitude, longitude
 
 ### Calculate Metrics
-This script computes metrics (RMSE only for now) by comparing forecast data against ground truth data for specified time periods and regions. Output are RMSE benchmarks for different variables and lead times in the format of the ground truth data.
+This script computes metrics by comparing forecast data against ground truth data for specified time periods and regions. Output are RMSE, MBE and skill scores for different variables and lead times in the format of the ground truth data.
 
 #### Options
 - `--forecast`: Location of the forecast data (required)
@@ -72,13 +72,6 @@ This script computes metrics (RMSE only for now) by comparing forecast data agai
 
 If variable name is not provided, no metrics will be computed for that variable.
 
-#### Example usage
-```bash
-poetry run python stationbench/calculate_metrics.py \
-    --forecast forecast.zarr \
-    --start_date 2023-01-01 --end_date 2023-12-31 --output forecast_metrics.zarr \
-    --region europe --name_10m_wind_speed "10si" --name_2m_temperature "2t"
-```
 ### Compare forecasts
 
 After generating the metrics, you can use the `compare_forecasts.py` script to compute metrics, create visualizations, and log the results to Weights & Biases (W&B).
@@ -92,19 +85,9 @@ The `compare_forecasts.py` script:
 4. Logs all visualizations and metrics to a W&B run.
 
 #### Options
-- `--evaluation_benchmarks_loc`: Path to the evaluation benchmarks (required)
-- `--reference_benchmark_locs`: Dictionary of reference benchmark locations, the first one is used for skill score (required)
+- `--benchmark_datasets_locs`: Dictionary of reference benchmark locations, the skill score is computed between the first and the second dataset (required)
 - `--run_name`: W&B run name (required)
 - `--regions`: Comma-separated list of regions, see `regions.py` for available regions (required)
-
-### Example
-```bash
-poetry run python stationbench/compare_forecasts.py \
-    --evaluation_benchmarks_loc forecast_metrics.zarr \
-    --reference_benchmark_locs '{"HRES": "hres_metrics.zarr"}' \
-    --regions europe \
-    --run_name wandb-run-name
-```
 
 ### Usage
 
@@ -128,8 +111,7 @@ stationbench.calculate_metrics(
 
 # Compare forecasts
 stationbench.compare_forecasts(
-    evaluation_benchmarks_loc="forecast_metrics.zarr",
-    reference_benchmark_locs={"HRES": "hres_metrics.zarr"},
+    benchmark_datasets_locs={"HRES": "hres_metrics.zarr", "ENS": "ens_metrics.zarr"},
     run_name="my-comparison",
     regions=["europe"]
 )
@@ -156,8 +138,7 @@ For small datasets, it's recommended to run without Dask. For large datasets
 Compare forecasts:
 ```bash
 stationbench-compare \
-    --evaluation_benchmarks_loc forecast_metrics.zarr \
-    --reference_benchmark_locs '{"HRES": "hres_metrics.zarr"}' \
+    --benchmark_datasets_locs '{"HRES": "hres_metrics.zarr", "ENS": "ens_metrics.zarr"}' \
     --regions europe \
     --run_name wandb-run-name
 ```

@@ -46,7 +46,9 @@ def test_compare_forecasts_cli(tmp_path):
     create_sample_benchmarks(eval_path)
     create_sample_benchmarks(ref_path)
 
-    ref_locs = json.dumps({"reference": str(ref_path)})
+    benchmark_datasets_locs = json.dumps(
+        {"evaluation": str(eval_path), "reference": str(ref_path)}
+    )
 
     with (
         patch("stationbench.cli.compare_forecasts_api") as mock_compare,
@@ -54,10 +56,8 @@ def test_compare_forecasts_cli(tmp_path):
             "sys.argv",
             [
                 "stationbench-compare",
-                "--evaluation_benchmarks_loc",
-                str(eval_path),
-                "--reference_benchmark_locs",
-                ref_locs,
+                "--benchmark_datasets_locs",
+                benchmark_datasets_locs,
                 "--run_name",
                 "test-run",
                 "--regions",
@@ -70,8 +70,7 @@ def test_compare_forecasts_cli(tmp_path):
         # Verify the API was called with correct arguments
         mock_compare.assert_called_once()
         args = mock_compare.call_args[1]  # Get kwargs
-        assert args["evaluation_benchmarks_loc"] == str(eval_path)
-        assert args["reference_benchmark_locs"] == ref_locs  # Compare with JSON string
+        assert args["benchmark_datasets_locs"] == benchmark_datasets_locs
         assert args["run_name"] == "test-run"
         assert args["regions"] == "europe"
 
