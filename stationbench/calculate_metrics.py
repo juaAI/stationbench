@@ -244,7 +244,7 @@ def main(args=None) -> xr.Dataset:
         xr.Dataset: The computed benchmarks dataset
     """
     init_logging()
-    
+
     # Only create and parse arguments if we don't have a Namespace
     if not isinstance(args, argparse.Namespace):
         parser = get_parser()
