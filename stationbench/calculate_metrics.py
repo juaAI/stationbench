@@ -262,9 +262,7 @@ def main(args=None) -> xr.Dataset:
         args.name_10m_wind_speed,
         args.name_2m_temperature,
     )
-    logger.info("Dimensions of forecast before interpolation: %s", forecast.dims)
     forecast = interpolate_to_stations(forecast, stations)
-    logger.info("Dimensions of forecast after interpolation: %s", forecast.dims)
     # Calculate benchmarks
     benchmarks_ds = generate_benchmarks(
         forecast=forecast,
