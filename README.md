@@ -111,7 +111,7 @@ stationbench.calculate_metrics(
 
 # Compare forecasts
 stationbench.compare_forecasts(
-    benchmark_datasets_locs={"JUA": "jua_metrics.zarr", "HRES": "hres_metrics.zarr"},
+    benchmark_datasets_locs={"HRES": "hres_metrics.zarr", "ENS": "ens_metrics.zarr"},
     run_name="my-comparison",
     regions=["europe"]
 )
@@ -138,7 +138,7 @@ For small datasets, it's recommended to run without Dask. For large datasets
 Compare forecasts:
 ```bash
 stationbench-compare \
-    --benchmark_datasets_locs '{"JUA": "jua_metrics.zarr", "HRES": "hres_metrics.zarr"}' \
+    --benchmark_datasets_locs '{"HRES": "hres_metrics.zarr", "ENS": "ens_metrics.zarr"}' \
     --regions europe \
     --run_name wandb-run-name
 ```
