@@ -22,17 +22,16 @@ def prepare_stations(
     """Filter ground truth stations by region."""
     logger.info("Preparing stations data")
     # Use load_dataset instead of direct loading
-    stations = load_dataset(
-        stations,
-        variables=[
-            "latitude",
-            "longitude",
-            "time",
-            "station_id",
-            "10m_wind_speed",
-            "2m_temperature",
-        ],
-    )
+    stations = load_dataset(stations)
+    variables = [
+        "latitude",
+        "longitude",
+        "time",
+        "station_id",
+        "10m_wind_speed",
+        "2m_temperature",
+    ]
+    stations = stations[variables]
 
     region = region_dict[region_name]
 
@@ -279,12 +278,16 @@ def main(args=None) -> xr.Dataset:
         xr.Dataset: The computed benchmarks dataset
     """
     init_logging()
-    if args is None:
-        parser = get_parser()
-        args = parser.parse_args()
 
-    # Initialize dask only if requested
-    if getattr(args, "use_dask", False):
+    # Only create and parse arguments if we don't have a Namespace
+    if not isinstance(args, argparse.Namespace):
+        parser = get_parser()
+        if args is None:
+            args = parser.parse_args()
+        else:
+            args = parser.parse_args(args)
+
+    if args.use_dask:
         cluster = LocalCluster(n_workers=22)
         client = Client(cluster)
         logger.info("Dask dashboard %s", client.dashboard_link)
