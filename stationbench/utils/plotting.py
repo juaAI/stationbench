@@ -46,7 +46,7 @@ def get_geo_scatter_config(mode: str, var: str, lead_title: str, global_metric: 
 def geo_scatter(
         metric_ds: xr.Dataset,
         var: str,
-        lead_range: slice,
+        lead_range_slice: slice,
         mode: str,
         lead_title: str,
     ) -> dict[str, Figure]:
@@ -64,7 +64,7 @@ def geo_scatter(
         metric_ds = metric_ds[var].sel(metric=mode)
 
         # Apply threshold only to RMSE
-        metrics_clean = metric_ds.sel(lead_time=lead_range)
+        metrics_clean = metric_ds.sel(lead_time=lead_range_slice)
         if mode == "rmse":
             metrics_clean = metrics_clean.where(metrics_clean < RMSE_THRESHOLD)
 

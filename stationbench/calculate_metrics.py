@@ -10,6 +10,7 @@ from stationbench.utils.regions import region_dict, select_region_for_stations
 from stationbench.utils.logging import init_logging
 from stationbench.utils.io import load_dataset
 from stationbench.utils.metrics import AVAILABLE_METRICS
+import matplotlib.pyplot as plt
 
 logger = logging.getLogger(__name__)
 
@@ -82,14 +83,12 @@ def prepare_forecast(
             "longitude": "auto",
         },
     )
-
     # First handle time dimensions
     forecast = forecast.sel(time=slice(start_date, end_date))
     forecast = forecast.rename(
         {"time": "init_time", "prediction_timedelta": "lead_time"}
     )
     forecast.coords["valid_time"] = forecast.init_time + forecast.lead_time
-
     # Handle region selection
     region = region_dict[region_name]
     lat_slice = slice(region.lat_slice[0], region.lat_slice[1])
@@ -102,18 +101,17 @@ def prepare_forecast(
         lon_slice.stop,
         lat_slice.stop,
     )
-
     # Longitude wrapping, if needed
     if forecast.longitude.max() > 180:
         logger.info("Converting longitudes from 0-360 to -180-180 range")
         forecast["longitude"] = xr.where(
             forecast.longitude > 180, forecast.longitude - 360, forecast.longitude
         )
-        forecast = forecast.sortby("longitude")
+    forecast = forecast.sortby("longitude")
+    forecast = forecast.sortby("latitude")
 
     # Select region
     forecast = forecast.sel(latitude=lat_slice, longitude=lon_slice)
-
     # Rename variables
     if wind_speed_name:
         logger.info(
@@ -125,7 +123,6 @@ def prepare_forecast(
             "Renaming temperature variable from %s to 2m_temperature", temperature_name
         )
         forecast = forecast.rename({temperature_name: "2m_temperature"})
-
     # Drop unwanted variables
     vars_to_drop = [
         var
@@ -175,7 +172,6 @@ def generate_benchmarks(
     # Calculate each metric
     for metric in AVAILABLE_METRICS.values():
         metrics_list.append(metric.compute(forecast, stations))
-
     # Merge all metrics into one dataset
     return xr.merge(metrics_list)
 
@@ -267,8 +263,9 @@ def main(args=None) -> xr.Dataset:
         args.name_10m_wind_speed,
         args.name_2m_temperature,
     )
+    logger.info("Dimensions of forecast before interpolation: %s", forecast.dims)
     forecast = interpolate_to_stations(forecast, stations)
-
+    logger.info("Dimensions of forecast after interpolation: %s", forecast.dims)
     # Calculate benchmarks
     benchmarks_ds = generate_benchmarks(
         forecast=forecast,
@@ -287,7 +284,7 @@ def main(args=None) -> xr.Dataset:
         for dim in benchmarks_ds.dims:
             chunks[dim] = -1  # -1 means one chunk for the whole dimension
         benchmarks_ds = benchmarks_ds.chunk(chunks)
-
+        breakpoint()
         benchmarks_ds.to_zarr(args.output, mode="w")
         logger.info("Finished writing benchmarks to %s", args.output)
 

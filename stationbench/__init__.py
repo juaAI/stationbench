@@ -54,29 +54,26 @@ def calculate_metrics(
 
 
 def compare_forecasts(
-    evaluation_benchmarks_loc: str,
-    reference_benchmark_locs: Union[str, dict[str, str]],
+    benchmark_datasets_locs: dict[str, str],
     run_name: str,
     regions: Union[str, list[str]],
 ) -> None:
     """Compare forecast benchmarks.
 
     Args:
-        evaluation_benchmarks_loc: Location of the evaluation benchmarks
-        reference_benchmark_locs: Dictionary of reference benchmark locations or JSON string
+        benchmark_datasets_locs: Dictionary of benchmark datasets locations
         run_name: Name for the W&B run
         regions: Regions to evaluate (string or list of strings)
     """
     # Handle reference_benchmark_locs as either dict or string
-    if isinstance(reference_benchmark_locs, str):
+    if isinstance(benchmark_datasets_locs, str):
         try:
-            reference_benchmark_locs = json.loads(reference_benchmark_locs)
+            benchmark_datasets_locs = json.loads(benchmark_datasets_locs)
         except json.JSONDecodeError as e:
             raise ValueError(f"Invalid JSON for reference_benchmark_locs: {e}")
 
     args = argparse.Namespace(
-        evaluation_benchmarks_loc=evaluation_benchmarks_loc,
-        reference_benchmark_locs=reference_benchmark_locs,
+        benchmark_datasets_locs=benchmark_datasets_locs,
         run_name=run_name,
         regions=regions
         if isinstance(regions, list)
