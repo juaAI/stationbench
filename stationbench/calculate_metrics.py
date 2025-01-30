@@ -3,13 +3,14 @@ import logging
 from datetime import date, datetime
 from typing import Union
 
+import numpy as np
 import xarray as xr
 from dask.distributed import Client, LocalCluster
 
-from stationbench.utils.regions import region_dict, select_region_for_stations
-from stationbench.utils.logging import init_logging
 from stationbench.utils.io import load_dataset
+from stationbench.utils.logging import init_logging
 from stationbench.utils.metrics import AVAILABLE_METRICS
+from stationbench.utils.regions import region_dict, select_region_for_stations
 
 logger = logging.getLogger(__name__)
 
@@ -82,6 +83,7 @@ def prepare_forecast(
             "longitude": "auto",
         },
     )
+    is_point_based = "station_id" in forecast.dims
 
     # First handle time dimensions
     forecast = forecast.sel(time=slice(start_date, end_date))
@@ -112,7 +114,10 @@ def prepare_forecast(
         forecast = forecast.sortby("longitude")
 
     # Select region
-    forecast = forecast.sel(latitude=lat_slice, longitude=lon_slice)
+    if is_point_based:
+        forecast = select_region_for_stations(forecast, lat_slice, lon_slice)
+    else:
+        forecast = forecast.sel(latitude=lat_slice, longitude=lon_slice)
 
     # Rename variables
     if wind_speed_name:
@@ -133,6 +138,37 @@ def prepare_forecast(
         if var not in ["10m_wind_speed", "2m_temperature"]
     ]
     forecast = forecast.drop_vars(vars_to_drop)
+
+    return forecast
+
+
+def intersect_stations(
+    forecast: xr.Dataset,
+    stations: xr.Dataset,
+    by: str = "station_id",
+    coord_tolerance: float | None = 0.01,
+) -> xr.Dataset:
+    """Match point-based forecast with station locations."""
+    logger.info("Matching point-based forecast with stations")
+    forecast_stations = forecast[by].values
+    stations_ids = stations[by].values
+    common_stations = np.intersect1d(forecast_stations, stations_ids)
+
+    if len(common_stations) == 0:
+        raise ValueError("No common stations found between forecast and stations")
+    logger.info("Found %d common stations", len(common_stations))
+
+    forecast = forecast.sel(**{by: common_stations})
+    stations_subset = stations.sel(**{by: common_stations})
+
+    # Validate coordinates match within tolerance
+    if coord_tolerance is not None:
+        lat_diff = np.abs(forecast.latitude.values - stations_subset.latitude.values)
+        lon_diff = np.abs(forecast.longitude.values - stations_subset.longitude.values)
+        if np.any(lat_diff > coord_tolerance) or np.any(lon_diff > coord_tolerance):
+            raise ValueError(
+                f"Coordinate mismatch between forecast and stations exceeds tolerance of {coord_tolerance} degrees"
+            )
 
     return forecast
 
@@ -267,7 +303,13 @@ def main(args=None) -> xr.Dataset:
         args.name_10m_wind_speed,
         args.name_2m_temperature,
     )
-    forecast = interpolate_to_stations(forecast, stations)
+
+    # Either match stations or interpolate based on forecast type
+    is_point_based = "station_id" in forecast.dims
+    if is_point_based:
+        forecast = intersect_stations(forecast, stations)
+    else:
+        forecast = interpolate_to_stations(forecast, stations)
 
     # Calculate benchmarks
     benchmarks_ds = generate_benchmarks(
