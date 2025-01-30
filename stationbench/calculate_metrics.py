@@ -244,8 +244,14 @@ def main(args=None) -> xr.Dataset:
         xr.Dataset: The computed benchmarks dataset
     """
     init_logging()
-    parser = get_parser()
-    args = parser.parse_args()
+    
+    # Only create and parse arguments if we don't have a Namespace
+    if not isinstance(args, argparse.Namespace):
+        parser = get_parser()
+        if args is None:
+            args = parser.parse_args()
+        else:
+            args = parser.parse_args(args)
 
     if args.use_dask:
         cluster = LocalCluster(n_workers=22)
