@@ -1,10 +1,8 @@
 import argparse
 import logging
 import json
-from typing import cast
 import wandb
 import xarray as xr
-from wandb.errors import CommError
 import pandas as pd
 import numpy as np
 
@@ -26,14 +24,13 @@ LEAD_RANGES = {
 logger = logging.getLogger(__name__)
 
 
-def convert_dataset_to_table(
-    dataset: xr.Dataset, model_name: str
-) -> pd.DataFrame:
+def convert_dataset_to_table(dataset: xr.Dataset, model_name: str) -> pd.DataFrame:
     """Convert xarray dataset to pandas DataFrame that is compatible with wandb."""
     df = dataset.to_dataframe().reset_index()
     df["lead_time"] = df["lead_time"] / np.timedelta64(1, "h")
     df["model"] = model_name
     return df
+
 
 def calculate_metric_skill_score(
     forecast: xr.Dataset, reference: xr.Dataset, metric: str
@@ -54,23 +51,22 @@ def calculate_metric_skill_score(
     skill_score = skill_score.expand_dims({"metric": [f"{metric}-ss"]})
     return skill_score
 
-def calculate_skill_scores(
-        temporal_metrics: list[xr.Dataset],
-        spatial_metrics: list[xr.Dataset],
-    ) -> tuple[xr.Dataset, xr.Dataset]:
-        """Calculate temporal and spatial skill scores."""
-        base_rmse = temporal_metrics[0].sel(metric="rmse")
-        reference_rmse = temporal_metrics[1].sel(metric="rmse")
-        temporal_ss = calculate_metric_skill_score(
-            base_rmse, reference_rmse, metric="rmse"
-        )
 
-        base_spatial_rmse = spatial_metrics[0].sel(metric="rmse")
-        reference_spatial_rmse = spatial_metrics[1].sel(metric="rmse")
-        spatial_ss = calculate_metric_skill_score(
-            base_spatial_rmse, reference_spatial_rmse, metric="rmse"
-        )
-        return temporal_ss, spatial_ss
+def calculate_skill_scores(
+    temporal_metrics: list[xr.Dataset],
+    spatial_metrics: list[xr.Dataset],
+) -> tuple[xr.Dataset, xr.Dataset]:
+    """Calculate temporal and spatial skill scores."""
+    base_rmse = temporal_metrics[0].sel(metric="rmse")
+    reference_rmse = temporal_metrics[1].sel(metric="rmse")
+    temporal_ss = calculate_metric_skill_score(base_rmse, reference_rmse, metric="rmse")
+
+    base_spatial_rmse = spatial_metrics[0].sel(metric="rmse")
+    reference_spatial_rmse = spatial_metrics[1].sel(metric="rmse")
+    spatial_ss = calculate_metric_skill_score(
+        base_spatial_rmse, reference_spatial_rmse, metric="rmse"
+    )
+    return temporal_ss, spatial_ss
 
 
 class PointBasedBenchmarking:
@@ -89,14 +85,15 @@ class PointBasedBenchmarking:
         for dataset in benchmark_datasets.values():
             temporal_metrics = []
             spatial_metrics = []
-            
+
             for metric in dataset.metric.values:
                 temporal_regions = []
                 temp_dataset = self.calculate_spatial_metric(
-                        dataset, metric,
-                    )
+                    dataset,
+                    metric,
+                )
                 spatial_metrics.append(temp_dataset)
-                
+
                 for region in self.regions.values():
                     temp_dataset = self.calculate_temporal_metrics(
                         dataset, region, metric
@@ -112,8 +109,12 @@ class PointBasedBenchmarking:
             temporal_metric_datasets.append(combined_temporal_metric)
             combined_spatial_metric = xr.concat(spatial_metrics, dim="metric")
             spatial_metric_datasets.append(combined_spatial_metric)
-        logger.info("Length of temporal metric datasets: %s", len(temporal_metric_datasets))
-        logger.info("Length of spatial metric datasets: %s", len(spatial_metric_datasets))
+        logger.info(
+            "Length of temporal metric datasets: %s", len(temporal_metric_datasets)
+        )
+        logger.info(
+            "Length of spatial metric datasets: %s", len(spatial_metric_datasets)
+        )
         return temporal_metric_datasets, spatial_metric_datasets
 
     def calculate_temporal_metrics(
@@ -133,9 +134,11 @@ class PointBasedBenchmarking:
         metric_ds = metric_ds.mean(dim="station_id", skipna=True)
         metric_ds = metric_ds.expand_dims(region=[region.name])
         return metric_ds
-    
+
     def calculate_spatial_metric(
-        self, dataset: xr.Dataset, metric: str,
+        self,
+        dataset: xr.Dataset,
+        metric: str,
     ) -> xr.Dataset:
         """Calculate spatial evolution of metrics across lead times."""
         metric_ds = dataset.sel(metric=metric)
@@ -147,6 +150,7 @@ class PointBasedBenchmarking:
         lon_slice = get_lon_slice(region)
         ds = select_region_for_stations(ds, lat_slice, lon_slice)
         return ds
+
 
 def get_parser() -> argparse.ArgumentParser:
     """Create and return the argument parser."""
@@ -214,14 +218,15 @@ def main(args=None):
     benchmark_datasets = list(xr.align(*benchmark_datasets.values(), join="left"))
     benchmark_datasets = dict(zip(model_names, benchmark_datasets))
 
-
     metrics = PointBasedBenchmarking(
         wandb_run=wandb_run,
         region_names=args.regions,
     )
-    
-    temporal_metrics_datasets, spatial_metrics_datasets = metrics.process_temporal_and_spatial_metrics(
-        benchmark_datasets=benchmark_datasets,
+
+    temporal_metrics_datasets, spatial_metrics_datasets = (
+        metrics.process_temporal_and_spatial_metrics(
+            benchmark_datasets=benchmark_datasets,
+        )
     )
 
     temporal_ss, spatial_ss = calculate_skill_scores(
@@ -229,7 +234,10 @@ def main(args=None):
     )
 
     # convert temporal metrics to tables
-    temporal_metrics_tables = [convert_dataset_to_table(metric, model_name) for metric, model_name in zip(temporal_metrics_datasets, model_names)]
+    temporal_metrics_tables = [
+        convert_dataset_to_table(metric, model_name)
+        for metric, model_name in zip(temporal_metrics_datasets, model_names)
+    ]
     temporal_ss_table = convert_dataset_to_table(temporal_ss, "temporal_ss")
     temporal_metrics_tables.append(temporal_ss_table)
 
@@ -241,26 +249,25 @@ def main(args=None):
             for var in spatial_metric_dataset.data_vars:
                 for metric in spatial_metric_dataset.metric.values:
                     fig = geo_scatter(
-                        metric_ds = spatial_metric_dataset,
-                        var = var,
-                        lead_range_slice = lead_range_slice,
-                        mode = metric,
-                        lead_title = lead_range_name,
+                        metric_ds=spatial_metric_dataset,
+                        var=var,
+                        lead_range_slice=lead_range_slice,
+                        mode=metric,
+                        lead_title=lead_range_name,
                     )
                     spatial_metrics_plots.update(fig)
-    
+
     for lead_range_name in LEAD_RANGES:
         lead_range_slice = LEAD_RANGES[lead_range_name]
         for var in spatial_ss.data_vars:
             fig = geo_scatter(
-                metric_ds = spatial_ss,
-                var = var,
-                lead_range_slice = lead_range_slice,
-                mode = 'rmse-ss',
-                lead_title = lead_range_name,
+                metric_ds=spatial_ss,
+                var=var,
+                lead_range_slice=lead_range_slice,
+                mode="rmse-ss",
+                lead_title=lead_range_name,
             )
             spatial_metrics_plots.update(fig)
-
 
     if wandb_run is not None:
         combined_df = pd.concat(temporal_metrics_tables)
@@ -268,11 +275,13 @@ def main(args=None):
         logger.info("Combined dataframe columns: %s", combined_df.columns.tolist())
         logger.info("Combined dataframe head:\n%s", combined_df.head().to_string())
         logger.info("Combined dataframe tail:\n%s", combined_df.tail().to_string())
-        stats = {'temporal_metrics_table': wandb.Table(dataframe=combined_df, columns=combined_df.columns.tolist())}
+        stats = {
+            "temporal_metrics_table": wandb.Table(
+                dataframe=combined_df, columns=combined_df.columns.tolist()
+            )
+        }
 
-        stats.update({
-            key: wandb.Plotly(value)
-            for key, value in spatial_metrics_plots.items()
-        })
+        stats.update(
+            {key: wandb.Plotly(value) for key, value in spatial_metrics_plots.items()}
+        )
         wandb_run.log(stats)
-

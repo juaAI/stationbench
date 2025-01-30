@@ -1,4 +1,3 @@
-import argparse
 from stationbench import calculate_metrics as calculate_metrics_api
 from stationbench import compare_forecasts as compare_forecasts_api
 from stationbench.calculate_metrics import get_parser as get_calculate_parser

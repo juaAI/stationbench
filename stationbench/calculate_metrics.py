@@ -10,7 +10,6 @@ from stationbench.utils.regions import region_dict, select_region_for_stations
 from stationbench.utils.logging import init_logging
 from stationbench.utils.io import load_dataset
 from stationbench.utils.metrics import AVAILABLE_METRICS
-import matplotlib.pyplot as plt
 
 logger = logging.getLogger(__name__)
 
