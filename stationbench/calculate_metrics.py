@@ -85,7 +85,7 @@ def prepare_forecast(
     )
 
     is_point_based = "station_id" in forecast.dims
-    
+
     # First handle time dimensions
     forecast = forecast.sel(time=slice(start_date, end_date))
     forecast = forecast.rename(
@@ -118,7 +118,7 @@ def prepare_forecast(
         forecast = select_region_for_stations(forecast, lat_slice, lon_slice)
     else:
         forecast = forecast.sel(latitude=lat_slice, longitude=lon_slice)
-    
+
     # Rename variables
     if wind_speed_name:
         logger.info(
