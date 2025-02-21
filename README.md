@@ -82,12 +82,13 @@ The `compare_forecasts.py` script:
 1. Computes RMSE (Root Mean Square Error) and skill scores for different variables and lead time ranges.
 2. Generates geographical scatter plots showing the spatial distribution of errors.
 3. Creates line plots showing the temporal evolution of errors.
-4. Logs all visualizations and metrics to a W&B run.
+4. Saves all visualizations and metrics to a directory, optionally logs to Weights & Biases.
 
 #### Options
 - `--benchmark_datasets_locs`: Dictionary of reference benchmark locations, the skill score is computed between the first and the second dataset (required)
-- `--run_name`: W&B run name (required)
 - `--regions`: Comma-separated list of regions, see `regions.py` for available regions (required)
+- `--wandb_run_name`: Weights & Biases run name (optional), if not provided, Weights & Biases will not be used
+- `--output_dir`: Output directory for results (optional, defaults to `stationbench-results`)
 
 ### Usage
 
@@ -112,7 +113,6 @@ stationbench.calculate_metrics(
 # Compare forecasts
 stationbench.compare_forecasts(
     benchmark_datasets_locs={"HRES": "hres_metrics.zarr", "ENS": "ens_metrics.zarr"},
-    run_name="my-comparison",
     regions=["europe"]
 )
 ```

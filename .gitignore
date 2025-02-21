@@ -30,3 +30,4 @@ poetry.lock
 *.csv
 *.json
 *.html
+*wandb/
