@@ -8,7 +8,7 @@ readme = "README.md"
 packages = [{include = "stationbench"}]
 
 [tool.poetry.dependencies]
-python = "~3.11"
+python = ">=3.11,<3.13"
 xarray = "^2024.1.1"
 pandas = "^2.2.0"
 dask = {extras = ["distributed"], version = "^2024.1.1"}
