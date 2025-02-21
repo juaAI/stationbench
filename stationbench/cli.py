@@ -9,18 +9,7 @@ def calculate_metrics():
     parser = get_calculate_parser()
     args = parser.parse_args()
 
-    # Call the API function with CLI arguments
-    metrics = calculate_metrics_api(
-        forecast=args.forecast,
-        stations=args.stations,
-        start_date=args.start_date,
-        end_date=args.end_date,
-        output=args.output,
-        region=args.region,
-        name_10m_wind_speed=args.name_10m_wind_speed,
-        name_2m_temperature=args.name_2m_temperature,
-        use_dask=args.use_dask,
-    )
+    metrics = calculate_metrics_api(**vars(args))
     return metrics
 
 
@@ -29,14 +18,4 @@ def compare_forecasts():
     parser = get_compare_parser()
     args = parser.parse_args()
 
-    # Call the API function with CLI arguments, only passing output_dir if specified
-    kwargs = {
-        "benchmark_datasets_locs": args.benchmark_datasets_locs,
-        "regions": args.regions,
-    }
-    if hasattr(args, "output_dir") and args.output_dir is not None:
-        kwargs["output_dir"] = args.output_dir
-    if hasattr(args, "wandb_run_name") and args.wandb_run_name is not None:
-        kwargs["wandb_run_name"] = args.wandb_run_name
-
-    compare_forecasts_api(**kwargs)
+    compare_forecasts_api(**vars(args))
