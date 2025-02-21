@@ -279,8 +279,8 @@ def main(args=None):
                 id=args.wandb_run_name,
             )
         except Exception as e:
-            logger.warning(f"Failed to initialize wandb: {e}")
-            wandb_run = None
+            logger.warning(f"Failed to initialize wandb: {e}. WandB will not be used.")
+            return
 
         logger.info(
             "Logging metrics to WandB: %s",
