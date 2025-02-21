@@ -26,6 +26,8 @@ poetry.lock
 # Logging
 *.log
 
-# WandB
-wandb/
+# data
+*.csv
 *.json
+*.html
+*wandb/

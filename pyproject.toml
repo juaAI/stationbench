@@ -12,12 +12,13 @@ python = "~3.11"
 xarray = "^2024.1.1"
 pandas = "^2.2.0"
 dask = {extras = ["distributed"], version = "^2024.1.1"}
-wandb = "^0.19.2"
 plotly = "^5.18.0"
 zarr = "^2.16.1"
 gcsfs = "^2024.2.0"
 scipy = "^1.12.0"
 nbformat = "^5.10.4"
+kaleido = "0.2.1"
+wandb = "^0.19.7"
 
 [tool.poetry.group.dev.dependencies]
 ruff = "0.4.2"

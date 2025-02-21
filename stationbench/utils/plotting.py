@@ -10,21 +10,21 @@ GEO_SCATTER_CONFIGS = {
         "cmin": -35,
         "cmax": 35,
         "cmap": "RdBu",
-        "wandb_label": "skill_score",
+        "label": "skill_score",
     },
     "rmse": {
         "title_template": "{var}, RMSE at lead time {lead_time_title}. Global RMSE: {global_metric:.2f}",
         "cmin": 0,
         "cmax": 7,
         "cmap": "Reds",
-        "wandb_label": "RMSE",
+        "label": "RMSE",
     },
     "mbe": {
         "title_template": "{var}, MBE at lead time {lead_time_title}. Global MBE: {global_metric:.2f}",
         "cmin": -5,
         "cmax": 5,
         "cmap": "RdBu",
-        "wandb_label": "MBE",
+        "label": "MBE",
     },
 }
 
@@ -41,7 +41,7 @@ def get_geo_scatter_config(mode: str, var: str, lead_title: str, global_metric: 
         "cmin": config["cmin"],
         "cmax": config["cmax"],
         "cmap": config["cmap"],
-        "wandb_label": config["wandb_label"],
+        "label": config["label"],
     }
 
 
@@ -102,7 +102,4 @@ def geo_scatter(
         range_color=(geo_scatter_config["cmin"], geo_scatter_config["cmax"]),
     )
     fig.update_layout(mapbox_style="carto-positron")
-    return {
-        f"stations_spatial_metrics/{geo_scatter_config['wandb_label']}/"
-        f"{var} {lead_title}": fig
-    }
+    return {f"{geo_scatter_config['label']}_{var}_{lead_title.replace(' ', '_')}": fig}
