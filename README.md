@@ -101,10 +101,10 @@ import stationbench
 
 # Calculate metrics
 stationbench.calculate_metrics(
-    forecast="forecast.zarr",
+    forecast="path/to/forecast.zarr",
     start_date="2023-01-01",
     end_date="2023-12-31",
-    output="forecast_metrics.zarr",
+    output="path/to/forecast_metrics.zarr",
     region="europe",
     name_10m_wind_speed="10si",
     name_2m_temperature="2t"
@@ -112,7 +112,7 @@ stationbench.calculate_metrics(
 
 # Compare forecasts
 stationbench.compare_forecasts(
-    benchmark_datasets_locs={"HRES": "hres_metrics.zarr", "ENS": "ens_metrics.zarr"},
+    benchmark_datasets_locs={"HRES": "path/to/hres_metrics.zarr", "ENS": "path/to/ens_metrics.zarr"},
     regions=["europe"]
 )
 ```
@@ -126,7 +126,7 @@ stationbench-calculate \
     --forecast path/to/forecast.zarr \
     --start_date 2023-01-01 \
     --end_date 2023-12-31 \
-    --output forecast_metrics.zarr \
+    --output path/to/forecast_metrics.zarr \
     --region europe \
     --name_10m_wind_speed "10si" \
     --name_2m_temperature "2t"
@@ -138,8 +138,10 @@ For small datasets, it's recommended to run without Dask. For large datasets
 Compare forecasts:
 ```bash
 stationbench-compare \
-    --benchmark_datasets_locs '{"HRES": "hres_metrics.zarr", "ENS": "ens_metrics.zarr"}' \
+    --benchmark_datasets_locs '{"HRES": "path/to/hres_metrics.zarr", "ENS": "path/to/ens_metrics.zarr"}' \
     --regions europe \
+    [--wandb_run_name "run_name"] \
+    [--output_dir "path/to/output_dir"]
 ```
 
 ## Contributing
