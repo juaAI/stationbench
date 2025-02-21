@@ -60,6 +60,8 @@ def test_compare_forecasts_cli(tmp_path):
                 benchmark_datasets_locs,
                 "--regions",
                 "europe",
+                "--wandb_run_name",
+                "test-run",
             ],
         ),
     ):
@@ -70,6 +72,7 @@ def test_compare_forecasts_cli(tmp_path):
         args = mock_compare.call_args[1]  # Get kwargs
         assert args["benchmark_datasets_locs"] == benchmark_datasets_locs
         assert args["regions"] == "europe"
+        assert args["wandb_run_name"] == "test-run"
 
 
 def create_sample_forecast(path):

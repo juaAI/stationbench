@@ -5,6 +5,7 @@ import os
 import xarray as xr
 import pandas as pd
 import numpy as np
+import wandb
 
 from stationbench.utils.regions import Region
 from stationbench.utils.regions import (
@@ -166,6 +167,12 @@ def get_parser() -> argparse.ArgumentParser:
         required=False,
         help="Output directory",
     )
+    parser.add_argument(
+        "--wandb_run_name",
+        type=str,
+        required=False,
+        help="Wandb run name",
+    )
     return parser
 
 
@@ -262,3 +269,32 @@ def main(args=None):
     # save plots to html
     for fig_name, fig in spatial_metrics_plots.items():
         fig.write_html(os.path.join(args.output_dir, f"{fig_name}.html"))
+
+    # save plots to wandb if wandb_run_name is provided
+    if args.wandb_run_name is not None:
+        try:
+            wandb_run = wandb.init(
+                project="stationbench",
+                name=args.wandb_run_name,
+                id=args.wandb_run_name,
+            )
+        except Exception as e:
+            logger.warning(f"Failed to initialize wandb: {e}")
+            wandb_run = None
+
+        logger.info(
+            "Logging metrics to WandB: %s",
+            wandb_run.url if wandb_run else "WandB not available",
+        )
+        stats = {
+            key: wandb.Plotly(value) for key, value in spatial_metrics_plots.items()
+        }
+        stats.update(
+            {
+                "temporal_metrics_table": wandb.Table(
+                    dataframe=pd.concat(temporal_metrics_tables)
+                )
+            }
+        )
+
+        wandb_run.log(stats)

@@ -36,5 +36,7 @@ def compare_forecasts():
     }
     if hasattr(args, "output_dir") and args.output_dir is not None:
         kwargs["output_dir"] = args.output_dir
+    if hasattr(args, "wandb_run_name") and args.wandb_run_name is not None:
+        kwargs["wandb_run_name"] = args.wandb_run_name
 
     compare_forecasts_api(**kwargs)

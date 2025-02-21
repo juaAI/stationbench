@@ -57,6 +57,7 @@ def compare_forecasts(
     benchmark_datasets_locs: dict[str, str],
     regions: Union[str, list[str]],
     output_dir: str = "stationbench-results",
+    wandb_run_name: Optional[str] = None,
 ) -> None:
     """Compare forecast benchmarks.
 
@@ -78,5 +79,6 @@ def compare_forecasts(
         if isinstance(regions, list)
         else [r.strip() for r in regions.split(",")],
         output_dir=output_dir,
+        wandb_run_name=wandb_run_name,
     )
     return compare_forecasts_main(args)
