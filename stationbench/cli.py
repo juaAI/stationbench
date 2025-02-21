@@ -29,9 +29,12 @@ def compare_forecasts():
     parser = get_compare_parser()
     args = parser.parse_args()
 
-    # Call the API function with CLI arguments
-    compare_forecasts_api(
-        benchmark_datasets_locs=args.benchmark_datasets_locs,
-        run_name=args.run_name,
-        regions=args.regions,
-    )
+    # Call the API function with CLI arguments, only passing output_dir if specified
+    kwargs = {
+        "benchmark_datasets_locs": args.benchmark_datasets_locs,
+        "regions": args.regions,
+    }
+    if hasattr(args, "output_dir") and args.output_dir is not None:
+        kwargs["output_dir"] = args.output_dir
+
+    compare_forecasts_api(**kwargs)

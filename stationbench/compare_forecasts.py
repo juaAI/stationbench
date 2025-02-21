@@ -1,7 +1,7 @@
 import argparse
 import logging
 import json
-import wandb
+import os
 import xarray as xr
 import pandas as pd
 import numpy as np
@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 
 
 def convert_dataset_to_table(dataset: xr.Dataset, model_name: str) -> pd.DataFrame:
-    """Convert xarray dataset to pandas DataFrame that is compatible with wandb."""
+    """Convert xarray dataset to pandas DataFrame."""
     df = dataset.to_dataframe().reset_index()
     df["lead_time"] = df["lead_time"] / np.timedelta64(1, "h")
     df["model"] = model_name
@@ -70,8 +70,7 @@ def calculate_skill_scores(
 
 
 class PointBasedBenchmarking:
-    def __init__(self, wandb_run: wandb.sdk.wandb_run.Run, region_names: list[str]):
-        self.wandb_run = wandb_run
+    def __init__(self, region_names: list[str]):
         self.regions = {
             region_name: region_dict[region_name] for region_name in region_names
         }
@@ -156,16 +155,16 @@ def get_parser() -> argparse.ArgumentParser:
         help="Dictionary of benchmark datasets locations",
     )
     parser.add_argument(
-        "--run_name",
-        type=str,
-        required=True,
-        help="W&B run name",
-    )
-    parser.add_argument(
         "--regions",
         type=str,
         required=True,
         help="Comma-separated list of regions",
+    )
+    parser.add_argument(
+        "--output_dir",
+        type=str,
+        required=False,
+        help="Output directory",
     )
     return parser
 
@@ -187,22 +186,8 @@ def main(args=None):
             args.benchmark_datasets_locs = json.loads(args.benchmark_datasets_locs)
         if isinstance(args.regions, str):
             args.regions = [r.strip() for r in args.regions.split(",")]
-
-    # Initialize wandb
-    try:
-        wandb_run = wandb.init(
-            project="stationbench",
-            name=args.run_name,
-            id=args.run_name,
-        )
-    except Exception as e:
-        logger.warning(f"Failed to initialize wandb: {e}")
-        wandb_run = None
-
-    logger.info(
-        "Logging metrics to WandB: %s",
-        wandb_run.url if wandb_run else "WandB not available",
-    )
+        if args.output_dir is None:
+            args.output_dir = "stationbench-results"
 
     benchmark_datasets = {
         model_name: xr.open_zarr(benchmark_dataset_loc)
@@ -213,7 +198,6 @@ def main(args=None):
     benchmark_datasets = dict(zip(model_names, benchmark_datasets))
 
     metrics = PointBasedBenchmarking(
-        wandb_run=wandb_run,
         region_names=args.regions,
     )
 
@@ -236,6 +220,16 @@ def main(args=None):
         temporal_ss, f"{model_names[0]}-vs-{model_names[1]}"
     )
     temporal_metrics_tables.append(temporal_ss_table)
+
+    # save tables to csv
+    logger.info(f"Saving tables to {args.output_dir}")
+    all_tables = pd.concat(temporal_metrics_tables)
+
+    if not os.path.exists(args.output_dir):
+        os.makedirs(args.output_dir)
+    all_tables.to_csv(
+        os.path.join(args.output_dir, "temporal_metrics.csv"), index=False
+    )
 
     # plot spatial metrics
     spatial_metrics_plots = {}
@@ -265,15 +259,6 @@ def main(args=None):
             )
             spatial_metrics_plots.update(fig)
 
-    if wandb_run is not None:
-        stats = {
-            key: wandb.Plotly(value) for key, value in spatial_metrics_plots.items()
-        }
-        stats.update(
-            {
-                "temporal_metrics_table": wandb.Table(
-                    dataframe=pd.concat(temporal_metrics_tables)
-                )
-            }
-        )
-        wandb_run.log(stats)
+    # save plots to html
+    for fig_name, fig in spatial_metrics_plots.items():
+        fig.write_html(os.path.join(args.output_dir, f"{fig_name}.html"))

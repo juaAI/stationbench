@@ -55,15 +55,15 @@ def calculate_metrics(
 
 def compare_forecasts(
     benchmark_datasets_locs: dict[str, str],
-    run_name: str,
     regions: Union[str, list[str]],
+    output_dir: str = "stationbench-results",
 ) -> None:
     """Compare forecast benchmarks.
 
     Args:
         benchmark_datasets_locs: Dictionary of benchmark datasets locations
-        run_name: Name for the W&B run
         regions: Regions to evaluate (string or list of strings)
+        output_dir: Directory to save the results
     """
     # Handle reference_benchmark_locs as either dict or string
     if isinstance(benchmark_datasets_locs, str):
@@ -74,10 +74,9 @@ def compare_forecasts(
 
     args = argparse.Namespace(
         benchmark_datasets_locs=benchmark_datasets_locs,
-        run_name=run_name,
         regions=regions
         if isinstance(regions, list)
         else [r.strip() for r in regions.split(",")],
+        output_dir=output_dir,
     )
-
     return compare_forecasts_main(args)

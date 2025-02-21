@@ -140,7 +140,6 @@ Compare forecasts:
 stationbench-compare \
     --benchmark_datasets_locs '{"HRES": "hres_metrics.zarr", "ENS": "ens_metrics.zarr"}' \
     --regions europe \
-    --run_name wandb-run-name
 ```
 
 ## Contributing
