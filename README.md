@@ -48,9 +48,9 @@ Source: [Meteostat](https://dev.meteostat.net/) ([CC BY-NC 4.0](https://creative
 
 The benchmarking data can be accessed from `https://opendata.jua.sh/stationbench/meteostat_benchmark.zarr`.
 
-![Map of weather stations used for benchmarking](docs/assets/stations_2023_map.png)
+![Map of weather stations used for benchmarking](https://opendata.jua.sh/stationbench/stations_2023_map.png)
 
-![Number of stations reporting over time](docs/assets/stations_2018-2024.png)
+![Number of stations reporting over time](https://opendata.jua.sh/stationbench/stations_2018-2024.png)
 
 Besides the provided benchmarking data, you can also use your own ground truth data. The ground truth data must be in zarr format and must include the following dimensions and coordinates:
 - Must include dimensions: station_id, time
