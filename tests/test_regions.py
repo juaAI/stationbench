@@ -1,5 +1,11 @@
 import xarray as xr
-from stationbench.utils.regions import region_dict, select_region_for_stations, Region
+from stationbench.utils.regions import (
+    region_dict,
+    select_region_for_stations,
+    Region,
+    add_region,
+)
+import pytest
 
 
 def test_region_dict_contains_required_regions():
@@ -42,3 +48,33 @@ def test_select_region_for_stations():
     )
 
     assert len(filtered_ds.station_id) == 2  # Only stations in Europe
+
+
+def test_add_region():
+    """Test adding a custom region."""
+    # Save original region_dict length
+    original_length = len(region_dict)
+
+    # Add a custom region
+    add_region("test-region", (10, 20), (30, 40))
+
+    # Check that the region was added
+    assert "test-region" in region_dict
+    assert region_dict["test-region"].lat_slice == (10, 20)
+    assert region_dict["test-region"].lon_slice == (30, 40)
+    assert len(region_dict) == original_length + 1
+    # Invalid name type
+    with pytest.raises(ValueError, match="Region name must be a string"):
+        add_region(123, (10, 20), (30, 40))
+
+    # Invalid latitude range (out of bounds)
+    with pytest.raises(ValueError, match="Invalid latitude range"):
+        add_region("invalid-region", (-100, 20), (30, 40))
+
+    # Invalid latitude range (min > max)
+    with pytest.raises(ValueError, match="Invalid latitude range"):
+        add_region("invalid-region", (30, 10), (30, 40))
+
+    # Invalid longitude range (out of bounds)
+    with pytest.raises(ValueError, match="Invalid longitude range"):
+        add_region("invalid-region", (10, 20), (30, 200))
