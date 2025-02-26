@@ -11,6 +11,8 @@ from stationbench.utils.io import load_dataset
 from stationbench.utils.logging import init_logging
 from stationbench.utils.metrics import AVAILABLE_METRICS
 from stationbench.utils.regions import region_dict, select_region_for_stations
+from dask.distributed import get_client
+
 
 logger = logging.getLogger(__name__)
 
@@ -296,20 +298,15 @@ def main(args=None) -> xr.Dataset:
     if args.use_dask:
         # Check if a client already exists
         try:
-            from dask.distributed import get_client
-
             client = get_client()
             logger.info("Using existing Dask client: %s", client.dashboard_link)
         except (ImportError, ValueError):
             # No client exists, create a new one
-            n_workers = (
-                args.n_workers if hasattr(args, "n_workers") else 4
-            )  # Default to 4 workers
-            cluster = LocalCluster(n_workers=n_workers)
+            cluster = LocalCluster(n_workers=args.n_workers)
             client = Client(cluster)
             logger.info(
                 "Created new Dask client with %d workers: %s",
-                n_workers,
+                args.n_workers,
                 client.dashboard_link,
             )
 
