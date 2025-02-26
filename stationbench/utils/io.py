@@ -3,14 +3,14 @@ import xarray as xr
 
 
 def load_dataset(
-    dataset: Union[str, xr.Dataset],
+    dataset: Union[str, xr.Dataset, xr.DataArray],
     variables: Optional[List[str]] = None,
     chunks: Optional[Dict[str, Any]] = None,
 ) -> xr.Dataset:
     """Load dataset from path or return dataset directly.
 
     Args:
-        dataset: Dataset or path to zarr store
+        dataset: Dataset, DataArray, or path to zarr store
         variables: Optional list of variables to load
         chunks: Optional chunks specification for dask
 
@@ -24,4 +24,6 @@ def load_dataset(
         if chunks is not None:
             kwargs["chunks"] = chunks
         return xr.open_zarr(dataset, **kwargs)
+    elif isinstance(dataset, xr.DataArray):
+        return dataset.to_dataset(name=dataset.name or "data")
     return dataset
