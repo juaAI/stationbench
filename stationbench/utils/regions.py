@@ -111,11 +111,7 @@ def add_region(
 
     # Validate longitude range (-180 to 180)
     min_lon, max_lon = lon_slice
-    if (
-        not (-180 <= min_lon < 180)
-        or not (-180 <= max_lon < 180)
-        or min_lon > max_lon
-    ):
+    if not (-180 <= min_lon < 180) or not (-180 <= max_lon < 180) or min_lon > max_lon:
         error_msg = f"Invalid longitude range: {lon_slice}. Must be within [-180, 180) and min_lon <= max_lon"
         logger.error(error_msg)
         raise ValueError(error_msg)
