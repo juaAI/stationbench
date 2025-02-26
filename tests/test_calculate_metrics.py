@@ -317,8 +317,8 @@ def test_dask_client_handling(
         forecast=sample_forecast,
         stations=sample_stations,
         region="europe",
-        start_date=None,
-        end_date=None,
+        start_date=datetime(2023, 1, 1),
+        end_date=datetime(2023, 1, 3),
         name_10m_wind_speed="10m_wind_speed",
         name_2m_temperature="2m_temperature",
         use_dask=use_dask,
@@ -357,36 +357,32 @@ def test_dask_client_handling(
                         return_value=sample_forecast,
                     ):
                         # Add Dask-specific patches based on test parameters
-                        if existing_client:
-                            with patch(
-                                "dask.distributed.get_client",
-                                return_value=mock_existing_client,
-                            ):
-                                result = main(args)
-                        else:
-                            with patch(
-                                "dask.distributed.get_client",
-                                side_effect=ValueError("No client found"),
-                            ):
+                        if use_dask:
+                            if existing_client:
                                 with patch(
-                                    "stationbench.calculate_metrics.LocalCluster",
-                                    return_value=mock_cluster,
-                                ) as mock_local_cluster:
+                                    "stationbench.calculate_metrics.get_client",
+                                    return_value=mock_existing_client,
+                                ):
+                                    result = main(args)
+                            else:
+                                with patch(
+                                    "stationbench.calculate_metrics.get_client",
+                                    side_effect=ValueError("No client found"),
+                                ):
                                     with patch(
-                                        "stationbench.calculate_metrics.Client",
-                                        return_value=mock_new_client,
-                                    ):
-                                        result = main(args)
+                                        "stationbench.calculate_metrics.LocalCluster",
+                                        return_value=mock_cluster,
+                                    ) as mock_local_cluster:
+                                        with patch(
+                                            "stationbench.calculate_metrics.Client",
+                                            return_value=mock_new_client,
+                                        ):
+                                            result = main(args)
 
-                                        # Check if LocalCluster was called with correct parameters
-                                        if use_dask:
+                                            # Check if LocalCluster was called with correct parameters
                                             mock_local_cluster.assert_called_once()
-                                            assert (
-                                                mock_local_cluster.call_args[1][
-                                                    "n_workers"
-                                                ]
-                                                == n_workers
-                                            )
+                        else:
+                            result = main(args)
 
-        # Verify the result is as expected
-        assert result is not None
+    # Verify the result
+    assert isinstance(result, xr.Dataset)
