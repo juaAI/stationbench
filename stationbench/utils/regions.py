@@ -28,6 +28,26 @@ region_dict = {
         lat_slice=(25, 60),
         lon_slice=(-125, -64),
     ),
+    "asia": Region(
+        name="asia",
+        lat_slice=(10, 55),
+        lon_slice=(60, 150),
+    ),
+    "australia": Region(
+        name="australia",
+        lat_slice=(-45, -10),
+        lon_slice=(110, 155),
+    ),
+    "germany": Region(
+        name="germany",
+        lat_slice=(47, 55),
+        lon_slice=(8, 15),
+    ),
+    "united-kingdom": Region(
+        name="united-kingdom",
+        lat_slice=(50, 58),
+        lon_slice=(-4, 2),
+    ),
 }
 
 
