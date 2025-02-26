@@ -45,6 +45,6 @@ def select_region_for_stations(
         & (ds.latitude <= lat_slice.stop)
         & (ds.longitude >= lon_slice.start)
         & (ds.longitude <= lon_slice.stop)
-    ).compute()
+    )
     ds = ds.isel(station_id=mask)
     return ds
