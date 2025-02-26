@@ -161,3 +161,9 @@ StationBench calculates the following verification metrics:
 
 We plan to add more benchmarking metrics in the future...
 
+## Regional Analysis
+
+StationBench supports several predefined regions and allows you to create custom regions.
+
+For details on creating and using custom regions, see the [Custom Regions Guide](docs/guides/custom_regions.md).
+
