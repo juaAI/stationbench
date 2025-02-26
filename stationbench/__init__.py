@@ -21,6 +21,7 @@ def calculate_metrics(
     name_10m_wind_speed: Optional[str] = None,
     name_2m_temperature: Optional[str] = None,
     use_dask: bool = False,
+    n_workers: int = 4,
 ) -> xr.Dataset:
     """Calculate metrics for a forecast dataset.
 
@@ -34,7 +35,7 @@ def calculate_metrics(
         name_10m_wind_speed: Name of wind speed variable
         name_2m_temperature: Name of temperature variable
         use_dask: Whether to use Dask for parallel computation (slower for small datasets)
-
+        n_workers: Number of Dask workers to use (default: 4, only used if --use_dask is set and no client exists)
     Returns:
         xr.Dataset: Calculated metrics
     """
@@ -48,6 +49,7 @@ def calculate_metrics(
         name_10m_wind_speed=name_10m_wind_speed,
         name_2m_temperature=name_2m_temperature,
         use_dask=use_dask,
+        n_workers=n_workers,
     )
 
     return calculate_metrics_main(args)
