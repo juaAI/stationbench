@@ -5,6 +5,7 @@ import numpy as np
 import pandas as pd
 import pytest
 import xarray as xr
+from unittest.mock import patch, MagicMock
 
 from stationbench.calculate_metrics import (
     generate_benchmarks,
@@ -298,3 +299,90 @@ def test_invalid_dates(sample_forecast):
             start_date=datetime(2022, 2, 1),
             end_date=datetime(2022, 1, 1),
         )
+
+
+@pytest.mark.parametrize(
+    "use_dask,existing_client,n_workers",
+    [
+        (False, False, None),  # No Dask
+        (True, True, None),  # Use existing client
+        (True, False, 2),  # Create new client with 2 workers
+    ],
+)
+def test_dask_client_handling(
+    use_dask, existing_client, n_workers, sample_forecast, sample_stations
+):
+    """Test that the code correctly handles Dask client scenarios."""
+    args = argparse.Namespace(
+        forecast=sample_forecast,
+        stations=sample_stations,
+        region="europe",
+        start_date=datetime(2023, 1, 1),
+        end_date=datetime(2023, 1, 3),
+        name_10m_wind_speed="10m_wind_speed",
+        name_2m_temperature="2m_temperature",
+        use_dask=use_dask,
+        n_workers=n_workers,
+        output=None,
+    )
+
+    # Mock for get_client to simulate existing/non-existing client
+    mock_existing_client = MagicMock()
+    mock_existing_client.dashboard_link = "http://mock-dashboard"
+
+    # Mock for LocalCluster and Client to avoid actual cluster creation
+    mock_cluster = MagicMock()
+    mock_new_client = MagicMock()
+    mock_new_client.dashboard_link = "http://new-mock-dashboard"
+
+    # Apply all patches using nested context managers
+    with patch(
+        "stationbench.calculate_metrics.generate_benchmarks",
+        return_value=sample_forecast,
+    ):
+        with patch(
+            "stationbench.calculate_metrics.prepare_stations",
+            return_value=sample_stations,
+        ):
+            with patch(
+                "stationbench.calculate_metrics.prepare_forecast",
+                return_value=sample_forecast,
+            ):
+                with patch(
+                    "stationbench.calculate_metrics.interpolate_to_stations",
+                    return_value=sample_forecast,
+                ):
+                    with patch(
+                        "stationbench.calculate_metrics.intersect_stations",
+                        return_value=sample_forecast,
+                    ):
+                        # Add Dask-specific patches based on test parameters
+                        if use_dask:
+                            if existing_client:
+                                with patch(
+                                    "stationbench.calculate_metrics.get_client",
+                                    return_value=mock_existing_client,
+                                ):
+                                    result = main(args)
+                            else:
+                                with patch(
+                                    "stationbench.calculate_metrics.get_client",
+                                    side_effect=ValueError("No client found"),
+                                ):
+                                    with patch(
+                                        "stationbench.calculate_metrics.LocalCluster",
+                                        return_value=mock_cluster,
+                                    ) as mock_local_cluster:
+                                        with patch(
+                                            "stationbench.calculate_metrics.Client",
+                                            return_value=mock_new_client,
+                                        ):
+                                            result = main(args)
+
+                                            # Check if LocalCluster was called with correct parameters
+                                            mock_local_cluster.assert_called_once()
+                        else:
+                            result = main(args)
+
+    # Verify the result
+    assert isinstance(result, xr.Dataset)

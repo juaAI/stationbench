@@ -69,6 +69,7 @@ This script computes metrics by comparing forecast data against ground truth dat
 - `--name_10m_wind_speed`: Name of 10m wind speed variable (optional)
 - `--name_2m_temperature`: Name of 2m temperature variable (optional)
 - `--use_dask`: Enable parallel computation with Dask (recommended for datasets >10GB)
+- `--n_workers`: Number of Dask workers to use (default: 4, only used if --use_dask is set and no client exists)
 
 If variable name is not provided, no metrics will be computed for that variable.
 
@@ -131,6 +132,7 @@ stationbench-calculate \
     --name_10m_wind_speed "10si" \
     --name_2m_temperature "2t"
     [--use_dask]  # Optional: Enable parallel computation with Dask
+    [--n_workers 4]  # Optional: Number of Dask workers to use
 ```
 For small datasets, it's recommended to run without Dask. For large datasets
 (>10GB), enabling Dask with `--use_dask` can improve performance.

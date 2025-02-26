@@ -11,6 +11,8 @@ from stationbench.utils.io import load_dataset
 from stationbench.utils.logging import init_logging
 from stationbench.utils.metrics import AVAILABLE_METRICS
 from stationbench.utils.regions import region_dict, select_region_for_stations
+from dask.distributed import get_client
+
 
 logger = logging.getLogger(__name__)
 
@@ -264,6 +266,12 @@ def get_parser() -> argparse.ArgumentParser:
         default=False,
         help="Use Dask for parallel computation",
     )
+    parser.add_argument(
+        "--n_workers",
+        type=int,
+        default=4,
+        help="Number of Dask workers to use (default: 4, only used if --use_dask is set and no client exists)",
+    )
     return parser
 
 
@@ -288,9 +296,19 @@ def main(args=None) -> xr.Dataset:
             args = parser.parse_args(args)
 
     if args.use_dask:
-        cluster = LocalCluster(n_workers=22)
-        client = Client(cluster)
-        logger.info("Dask dashboard %s", client.dashboard_link)
+        # Check if a client already exists
+        try:
+            client = get_client()
+            logger.info("Using existing Dask client: %s", client.dashboard_link)
+        except (ImportError, ValueError):
+            # No client exists, create a new one
+            cluster = LocalCluster(n_workers=args.n_workers)
+            client = Client(cluster)
+            logger.info(
+                "Created new Dask client with %d workers: %s",
+                args.n_workers,
+                client.dashboard_link,
+            )
 
     # Process stations
     stations = prepare_stations(args.stations, args.region)
