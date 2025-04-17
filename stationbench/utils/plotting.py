@@ -6,9 +6,9 @@ from plotly.graph_objects import Figure
 RMSE_THRESHOLD = 20
 GEO_SCATTER_CONFIGS = {
     "rmse-ss": {
-        "title_template": "{var}, Skill Score [%] at lead time {lead_time_title}",
-        "cmin": -35,
-        "cmax": 35,
+        "title_template": "{var}, Skill Score at lead time {lead_time_title}",
+        "cmin": -0.35,
+        "cmax": 0.35,
         "cmap": "RdBu",
         "label": "skill_score",
     },
