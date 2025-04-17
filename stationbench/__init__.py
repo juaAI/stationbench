@@ -77,6 +77,7 @@ def compare_forecasts(
 
     args = argparse.Namespace(
         benchmark_datasets_locs=benchmark_datasets_locs,
+        reference_key=list(benchmark_datasets_locs.keys())[0],
         regions=regions
         if isinstance(regions, list)
         else [r.strip() for r in regions.split(",")],

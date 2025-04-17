@@ -56,17 +56,32 @@ def calculate_metric_skill_score(
 def calculate_skill_scores(
     temporal_metrics: list[xr.Dataset],
     spatial_metrics: list[xr.Dataset],
-) -> tuple[xr.Dataset, xr.Dataset]:
+    reference_metric_index: int,
+) -> tuple[list[xr.Dataset], list[xr.Dataset]]:
     """Calculate temporal and spatial skill scores."""
-    base_rmse = temporal_metrics[0].sel(metric="rmse")
-    reference_rmse = temporal_metrics[1].sel(metric="rmse")
-    temporal_ss = calculate_metric_skill_score(base_rmse, reference_rmse, metric="rmse")
 
-    base_spatial_rmse = spatial_metrics[0].sel(metric="rmse")
-    reference_spatial_rmse = spatial_metrics[1].sel(metric="rmse")
-    spatial_ss = calculate_metric_skill_score(
-        base_spatial_rmse, reference_spatial_rmse, metric="rmse"
-    )
+    temporal_ss = []
+
+    for temporal_metric in temporal_metrics:
+        base_rmse = temporal_metric.sel(metric="rmse")
+        reference_rmse = temporal_metrics[reference_metric_index].sel(metric="rmse")
+        temporal_ss.append(
+            calculate_metric_skill_score(base_rmse, reference_rmse, metric="rmse")
+        )
+
+    spatial_ss = []
+
+    for spatial_metric in spatial_metrics:
+        base_spatial_rmse = spatial_metric.sel(metric="rmse")
+        reference_spatial_rmse = spatial_metrics[reference_metric_index].sel(
+            metric="rmse"
+        )
+        spatial_ss.append(
+            calculate_metric_skill_score(
+                base_spatial_rmse, reference_spatial_rmse, metric="rmse"
+            )
+        )
+
     return temporal_ss, spatial_ss
 
 
@@ -156,6 +171,12 @@ def get_parser() -> argparse.ArgumentParser:
         help="Dictionary of benchmark datasets locations",
     )
     parser.add_argument(
+        "--reference_key",
+        type=str,
+        required=True,
+        help="The benchmark to be used as reference for skill score computation",
+    )
+    parser.add_argument(
         "--regions",
         type=str,
         required=True,
@@ -201,8 +222,9 @@ def main(args=None):
         for model_name, benchmark_dataset_loc in args.benchmark_datasets_locs.items()
     }
     model_names = list(benchmark_datasets.keys())
-    benchmark_datasets = list(xr.align(*benchmark_datasets.values(), join="left"))
-    benchmark_datasets = dict(zip(model_names, benchmark_datasets))
+    reference_model_index = model_names.index(args.reference_key)
+    # benchmark_datasets = list(xr.align(*benchmark_datasets.values(), join="left"))
+    # benchmark_datasets = dict(zip(model_names, benchmark_datasets))
 
     metrics = PointBasedBenchmarking(
         region_names=args.regions,
@@ -215,7 +237,9 @@ def main(args=None):
     )
 
     temporal_ss, spatial_ss = calculate_skill_scores(
-        temporal_metrics_datasets, spatial_metrics_datasets
+        temporal_metrics_datasets,
+        spatial_metrics_datasets,
+        reference_metric_index=reference_model_index,
     )
 
     # convert temporal metrics to tables
@@ -223,10 +247,11 @@ def main(args=None):
         convert_dataset_to_table(metric, model_name)
         for metric, model_name in zip(temporal_metrics_datasets, model_names)
     ]
-    temporal_ss_table = convert_dataset_to_table(
-        temporal_ss, f"{model_names[0]}-vs-{model_names[1]}"
-    )
-    temporal_metrics_tables.append(temporal_ss_table)
+    for model_name, temporal_ss_model in zip(model_names, temporal_ss):
+        temporal_ss_table = convert_dataset_to_table(
+            temporal_ss_model, f"{model_name}-vs-{model_names[reference_model_index]}"
+        )
+        temporal_metrics_tables.append(temporal_ss_table)
 
     # save tables to csv
     logger.info(f"Saving tables to {args.output_dir}")
@@ -240,7 +265,9 @@ def main(args=None):
 
     # plot spatial metrics
     spatial_metrics_plots = {}
-    for spatial_metric_dataset in spatial_metrics_datasets:
+    for model_name, spatial_metric_dataset in zip(
+        model_names, spatial_metrics_datasets
+    ):
         for lead_range_name in LEAD_RANGES:
             lead_range_slice = LEAD_RANGES[lead_range_name]
             for var in spatial_metric_dataset.data_vars:
@@ -256,15 +283,22 @@ def main(args=None):
 
     for lead_range_name in LEAD_RANGES:
         lead_range_slice = LEAD_RANGES[lead_range_name]
-        for var in spatial_ss.data_vars:
-            fig = geo_scatter(
-                metric_ds=spatial_ss,
-                var=var,
-                lead_range_slice=lead_range_slice,
-                mode="rmse-ss",
-                lead_title=lead_range_name,
-            )
-            spatial_metrics_plots.update(fig)
+        for model_name, spatial_ss_model in zip(model_names, spatial_ss):
+            for var in spatial_ss_model.data_vars:
+                fig = geo_scatter(
+                    metric_ds=spatial_ss_model,
+                    var=var,
+                    lead_range_slice=lead_range_slice,
+                    mode="rmse-ss",
+                    lead_title=lead_range_name,
+                )
+
+                fig_renamed = {}
+
+                for k, v in fig.items():
+                    fig_renamed[model_name + "_" + k] = fig[k]
+
+                spatial_metrics_plots.update(fig_renamed)
 
     # save plots to html
     for fig_name, fig in spatial_metrics_plots.items():
