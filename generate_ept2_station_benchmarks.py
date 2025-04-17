@@ -36,8 +36,9 @@ FORECASTS = [
     # (
     #     "ec_hres_forecast",
     #     "gs://jua-benchmarking/forecasts/third_party/ifs-fc-2018-2023-0012-6hr-1440x721-mslp-z500.zarr",
+    #     ("10m_wind_speed", "2m_temperature")
     # ),
-    # ("ec_ens_mean", "gs://jua-data-sandbox/ifs/ensemble/ifs_em_2018-2023_1440x721.zarr")
+    # ("ec_ens_mean", "gs://jua-data-sandbox/ifs/ensemble/ifs_em_2018-2023_1440x721.zarr", ("10m_wind_speed", "2m_temperature"))
 ]
 
 stations = xr.open_zarr("https://opendata.jua.sh/stationbench/meteostat_benchmark.zarr")
