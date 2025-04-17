@@ -10,6 +10,8 @@ logging.basicConfig(
 )
 
 REGIONS = ["global"]
+
+# Format: name: str, hindcast_path: str | list[str], var_names: tuple[str, str]
 FORECASTS = [
     # (
     #     "ept2_v2",
