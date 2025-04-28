@@ -9,7 +9,7 @@ packages = [{include = "stationbench"}]
 
 [tool.poetry.dependencies]
 python = ">=3.11,<3.13"
-xarray = {version = "^2025.1.2", extras = ["complete"]}
+xarray = {extras = ["io"], version = "^2025.03.0"}
 pandas = "^2.2.0"
 dask = {extras = ["distributed"], version = "^2024.1.1"}
 plotly = "^5.18.0"
