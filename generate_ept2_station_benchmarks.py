@@ -13,11 +13,11 @@ REGIONS = ["global"]
 
 # Format: name: str, hindcast_path: str | list[str], var_names: tuple[str, str]
 FORECASTS = [
-    # (
-    #     "ept2_v2",
-    #     "/mnt/jua-shared-1/jua-hindcasts/EPT2-global-from-2023-01-01-to-2024-12-28-v2.zarr",
-    #     ("wind_speed_10m", "air_temperature_2m"),
-    # ),
+    (
+        "ept2_v2",
+        "/mnt/jua-shared-1/jua-hindcasts/EPT2-global-from-2023-01-01-to-2024-12-28-v2.zarr",
+        ("wind_speed_10m", "air_temperature_2m"),
+    ),
     # (
     #     "ept2_v1",
     #     [
@@ -129,7 +129,7 @@ for forecast_name, forecast_path, (
 
         # forecast = forecast.isel(prediction_timedelta=[0])
 
-        output_forecast = f"./data/{forecast_name}_{region}_first_of_month.zarr"
+        output_forecast = f"./data/{forecast_name}_{region}_weatherreal.zarr"
 
         stationbench.calculate_metrics(
             forecast=forecast,
