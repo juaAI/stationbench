@@ -56,7 +56,7 @@ def calculate_metric_skill_score(
 def calculate_skill_scores(
     temporal_metrics: list[xr.Dataset],
     spatial_metrics: list[xr.Dataset],
-    reference_metric_index: int,
+    reference_metric_index: int = 0,
 ) -> tuple[list[xr.Dataset], list[xr.Dataset]]:
     """Calculate temporal and spatial skill scores."""
 
