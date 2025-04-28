@@ -54,6 +54,8 @@ def prepare_stations(
     remaining_stations = stations.sizes["station_id"]
     logger.info("Filtered stations: %s -> %s", original_stations, remaining_stations)
 
+    stations = stations.chunk({"time": -1, "station_id": -1}).compute()
+
     return stations
 
 
@@ -181,6 +183,15 @@ def interpolate_to_stations(forecast: xr.Dataset, stations: xr.Dataset) -> xr.Da
         longitude=stations.longitude,
         method="linear",
     )
+
+    forecast_interp = forecast_interp.chunk(
+        {
+            "init_time": -1,
+            "lead_time": -1,
+            "station_id": -1,
+        }
+    ).compute()
+
     return forecast_interp
 
 
@@ -348,6 +359,7 @@ def main(args=None) -> xr.Dataset:
         for dim in benchmarks_ds.dims:
             chunks[dim] = -1  # -1 means one chunk for the whole dimension
         benchmarks_ds = benchmarks_ds.chunk(chunks)
+        logger.info("Finished rechunking")
         benchmarks_ds.to_zarr(args.output, mode="w")
         logger.info("Finished writing benchmarks to %s", args.output)
 
