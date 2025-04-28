@@ -44,5 +44,7 @@ def test_identical_forecast_skill_score(tmp_path):
     )
 
     # Check that the skill scores are 0
-    assert temporal_ss["10m_wind_speed"].sum() == 0
-    assert spatial_ss["10m_wind_speed"].sum() == 0
+    for skill_score in temporal_ss:
+        assert skill_score == 0
+    for skill_score in spatial_ss:
+        assert skill_score == 0
