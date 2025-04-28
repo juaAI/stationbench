@@ -7,17 +7,20 @@ from datetime import datetime
 regions = ["global", "europe", "north-america"]
 
 benchmark_datasets_locs = {
-    "EC IFS": "/home/niall/stationbench/data/ec_hres_forecast_global.zarr",
-    "EPT-2 v1": "/home/niall/stationbench/data/ept2_v1_global.zarr",
-    "EPT-2 v2": "/home/niall/stationbench/data/ept2_v2_global.zarr",
-    "Aurora": "/home/niall/stationbench/data/aurora_global.zarr",
-    "EC ENS Mean": "/home/niall/stationbench/data/ec_ens_mean_global.zarr",
+    "EC IFS": "/home/niall/stationbench/data/ec_hres_forecast_global_first_of_month.zarr",
+    # "EPT-2 v1": "/home/niall/stationbench/data/ept2_v1_global_first_of_month.zarr",
+    "EPT-2 v2": "/home/niall/stationbench/data/ept2_v2_global_first_of_month.zarr",
+    "EPT-2 1.5 mixed": "/home/niall/stationbench/data/ept2_15_mixed_global_first_of_month.zarr",
+    "EPT-1.5": "/home/niall/stationbench/data/ept1.5_global_first_of_month.zarr",
+    "Aurora": "/home/niall/stationbench/data/aurora_global_first_of_month.zarr",
+    # "EC ENS Mean": "/home/niall/stationbench/data/ec_ens_mean_global_weatherreal_00.zarr",
+    "AIFS": "/home/niall/stationbench/data/aifs_global_first_of_month.zarr",
 }
 
 stationbench.compare_forecasts(
     benchmark_datasets_locs=benchmark_datasets_locs,
     regions=regions,
-    # wandb_run_name=f"stationbench-run-{datetime.now().strftime('%Y-%m-%d_%H-%M')}",
+    wandb_run_name=f"weatherreal-run-{datetime.now().strftime('%Y-%m-%d_%H-%M')}",
 )
 
 # # %%

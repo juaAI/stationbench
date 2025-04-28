@@ -27,23 +27,43 @@ FORECASTS = [
     #     ],
     #     ("wind_speed_10m", "air_temperature_2m"),
     # ),
-    (
-        "aurora",
-        [
-            "/mnt/jua-shared-1/jua-hindcasts/aurora-global-from-2023-01-02-to-2023-07-05.zarr",
-            "/mnt/jua-shared-1/jua-hindcasts/aurora-global-from-2023-07-06-to-2024-12-28.zarr",
-        ],
-        ("wind_speed_10m", "air_temperature_2m"),
-    ),
+    # (
+    #     "ept2_15_mixed",
+    #     "/mnt/jua-shared-1/jua-hindcasts/test_ens.zarr",
+    #     ("wind_speed_10m", "air_temperature_2m"),
+    # ),
+    # (
+    #     "ept1.5",
+    #     "/mnt/jua-shared-1/jua-hindcasts/2024-09-25-crack-alien-1_20250423-081125_epoch30_max_lead_time12.zarr",
+    #     ("wind_speed_10m", "air_temperature_2m"),
+    # ),
     # (
     #     "ec_hres_forecast",
     #     "gs://jua-benchmarking/forecasts/third_party/ifs-fc-2018-2023-0012-6hr-1440x721-mslp-z500.zarr",
-    #     ("10m_wind_speed", "2m_temperature")
+    #     ("10m_wind_speed", "2m_temperature"),
     # ),
-    # ("ec_ens_mean", "gs://jua-data-sandbox/ifs/ensemble/ifs_em_2018-2023_1440x721.zarr", ("10m_wind_speed", "2m_temperature"))
+    # (
+    #     "aurora",
+    #     [
+    #         "/home/niall/mnt/aurora-global-from-2023-01-02-to-2023-07-05.zarr",
+    #         "/home/niall/mnt/aurora-global-from-2023-07-06-to-2024-12-28.zarr",
+    #     ],
+    #     ("wind_speed_10m", "air_temperature_2m"),
+    # ),
+    # (
+    #     "aifs",
+    #     "/mnt/jua-shared-1/jua-hindcasts/AIFS-global-from-2023-01-02-to-2024-12-28.zarr/",
+    #     ("wind_speed_10m", "air_temperature_2m"),
+    # ),
+    # (
+    #     "ec_ens_mean",
+    #     "gs://jua-data-sandbox/ifs/ensemble/ifs_em_2018-2023_1440x721.zarr",
+    #     ("10m_wind_speed", "2m_temperature"),
+    # ),
 ]
 
-stations = xr.open_zarr("https://opendata.jua.sh/stationbench/meteostat_benchmark.zarr")
+# stations = xr.open_zarr("https://opendata.jua.sh/stationbench/meteostat_benchmark.zarr")
+stations = xr.open_zarr("/home/niall/stationbench/WeatherReal-ISD-2023.zarr")
 
 # %%
 for forecast_name, forecast_path, (
@@ -64,8 +84,8 @@ for forecast_name, forecast_path, (
 
         forecast = forecast[[name_10m_wind_speed, name_2m_temperature]]
 
-        start_date = "2023-01-01"
-        end_date = "2023-12-31"
+        start_date = "2023-01-02"
+        end_date = "2023-12-10"
 
         # Define your custom range
         start = pd.Timestamp(start_date)  # could be before available data
@@ -80,30 +100,36 @@ for forecast_name, forecast_path, (
         clamped_start = max(start, data_start)
         clamped_end = min(end, data_end)
 
-        # Generate 4-day intervals at 00:00, 06:00, 12:00, and 18:00
+        # Generate the first of the month at 00, 06, 12, and 18 UTC within the clamped range
         dates_00 = pd.date_range(start=clamped_start, end=clamped_end, freq="4D")
-        dates_06 = pd.date_range(
-            start=clamped_start + pd.Timedelta(hours=6), end=clamped_end, freq="4D"
-        )
-        dates_12 = pd.date_range(
-            start=clamped_start + pd.Timedelta(hours=12), end=clamped_end, freq="4D"
-        )
-        dates_18 = pd.date_range(
-            start=clamped_start + pd.Timedelta(hours=18), end=clamped_end, freq="4D"
-        )
+        dates_06 = dates_00 + pd.Timedelta(hours=6)
+        dates_12 = dates_00 + pd.Timedelta(hours=12)
+        dates_18 = dates_00 + pd.Timedelta(hours=18)
 
         # Combine and sort
         target_times = (
             dates_00.append(dates_06).append(dates_12).append(dates_18).sort_values()
         )
 
+        # target_times = dates_00.append(dates_12).sort_values()
+
+        # target_times = dates_00
+
         # Keep only times that exist in the dataset
         target_times = target_times.intersection(available_times)
 
+        print(target_times)
+
         # Select from dataset
         forecast = forecast.sel(time=target_times)
+        forecast = forecast.sel(
+            prediction_timedelta=forecast.prediction_timedelta
+            <= pd.Timedelta(hours=120)
+        )
 
-        output_forecast = f"./data/{forecast_name}_{region}.zarr"
+        # forecast = forecast.isel(prediction_timedelta=[0])
+
+        output_forecast = f"./data/{forecast_name}_{region}_first_of_month.zarr"
 
         stationbench.calculate_metrics(
             forecast=forecast,
@@ -117,5 +143,7 @@ for forecast_name, forecast_path, (
             use_dask=False,
             # n_workers=4,
         )
+
+stations.close()
 
 # %%
