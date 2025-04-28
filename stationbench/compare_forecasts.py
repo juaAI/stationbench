@@ -173,8 +173,8 @@ def get_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--reference_key",
         type=str,
-        required=True,
-        help="The benchmark to be used as reference for skill score computation",
+        required=False,
+        help="The benchmark to be used as reference for skill score computation. If not provided, the first benchmark will be used.",
     )
     parser.add_argument(
         "--regions",
@@ -222,7 +222,13 @@ def main(args=None):
         for model_name, benchmark_dataset_loc in args.benchmark_datasets_locs.items()
     }
     model_names = list(benchmark_datasets.keys())
-    reference_model_index = model_names.index(args.reference_key)
+
+    if args.reference_key is not None:
+        reference_model_index = model_names.index(args.reference_key)
+    else:
+        # If no reference key is provided, use the first model as reference
+        reference_model_index = 0
+
     # benchmark_datasets = list(xr.align(*benchmark_datasets.values(), join="left"))
     # benchmark_datasets = dict(zip(model_names, benchmark_datasets))
 
