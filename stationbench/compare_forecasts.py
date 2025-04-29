@@ -4,7 +4,6 @@ import json
 import os
 import xarray as xr
 import pandas as pd
-import numpy as np
 import wandb
 
 from stationbench.utils.regions import Region
