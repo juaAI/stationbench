@@ -229,8 +229,8 @@ def main(args=None):
         # If no reference key is provided, use the first model as reference
         reference_model_index = 0
 
-    # benchmark_datasets = list(xr.align(*benchmark_datasets.values(), join="left"))
-    # benchmark_datasets = dict(zip(model_names, benchmark_datasets))
+    benchmark_datasets = list(xr.align(*benchmark_datasets.values(), join="left"))
+    benchmark_datasets = dict(zip(model_names, benchmark_datasets))
 
     metrics = PointBasedBenchmarking(
         region_names=args.regions,
