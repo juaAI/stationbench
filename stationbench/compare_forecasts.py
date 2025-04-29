@@ -284,7 +284,13 @@ def main(args=None):
                         mode=metric,
                         lead_title=lead_range_name,
                     )
-                    spatial_metrics_plots.update(fig)
+
+                    fig_renamed = {}
+
+                    for k, v in fig.items():
+                        fig_renamed[model_name + "_" + k] = fig[k]
+
+                    spatial_metrics_plots.update(fig_renamed)
 
     for lead_range_name in LEAD_RANGES:
         lead_range_slice = LEAD_RANGES[lead_range_name]
