@@ -28,7 +28,7 @@ logger = logging.getLogger(__name__)
 def convert_dataset_to_table(dataset: xr.Dataset, model_name: str) -> pd.DataFrame:
     """Convert xarray dataset to pandas DataFrame."""
     df = dataset.to_dataframe().reset_index()
-    df["lead_time"] = df["lead_time"] / np.timedelta64(1, "h")
+    df["lead_time"] = df["lead_time"].dt.total_seconds() // 3600
     df["model"] = model_name
     return df
 
@@ -218,7 +218,7 @@ def main(args=None):
             args.output_dir = "stationbench-results"
 
     benchmark_datasets = {
-        model_name: xr.open_zarr(benchmark_dataset_loc, decode_timedelta=False)
+        model_name: xr.open_zarr(benchmark_dataset_loc, decode_timedelta=True)
         for model_name, benchmark_dataset_loc in args.benchmark_datasets_locs.items()
     }
     model_names = list(benchmark_datasets.keys())
