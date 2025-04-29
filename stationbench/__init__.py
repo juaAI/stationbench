@@ -67,7 +67,7 @@ def compare_forecasts(
     Args:
         benchmark_datasets_locs: Dictionary of benchmark datasets locations
         regions: Regions to evaluate (string or list of strings)
-        reference_key: Key for the reference dataset in benchmark_datasets_locs
+        reference_key: Key for the reference dataset in benchmark_datasets_locs. By default, the first key is used.
         output_dir: Directory to save the results
     """
     # Handle reference_benchmark_locs as either dict or string
