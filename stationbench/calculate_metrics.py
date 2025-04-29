@@ -360,7 +360,7 @@ def main(args=None) -> xr.Dataset:
             chunks[dim] = -1  # -1 means one chunk for the whole dimension
         benchmarks_ds = benchmarks_ds.chunk(chunks)
         logger.info("Finished rechunking")
-        benchmarks_ds.to_zarr(args.output, mode="w")
+        benchmarks_ds.to_zarr(args.output, mode="w", consolidated=False)
         logger.info("Finished writing benchmarks to %s", args.output)
 
     return benchmarks_ds

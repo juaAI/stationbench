@@ -218,7 +218,7 @@ def main(args=None):
             args.output_dir = "stationbench-results"
 
     benchmark_datasets = {
-        model_name: xr.open_zarr(benchmark_dataset_loc)
+        model_name: xr.open_zarr(benchmark_dataset_loc, decode_timedelta=False)
         for model_name, benchmark_dataset_loc in args.benchmark_datasets_locs.items()
     }
     model_names = list(benchmark_datasets.keys())

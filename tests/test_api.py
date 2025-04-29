@@ -53,7 +53,7 @@ def test_calculate_metrics_with_dataset(sample_forecast, tmp_path):
 def test_calculate_metrics_with_path(sample_forecast, tmp_path):
     """Test calculate_metrics with file path input."""
     forecast_path = tmp_path / "forecast.zarr"
-    sample_forecast.to_zarr(forecast_path)
+    sample_forecast.to_zarr(forecast_path, consolidated=False)
 
     metrics = calculate_metrics(
         forecast=str(forecast_path),

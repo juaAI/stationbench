@@ -18,7 +18,7 @@ def load_dataset(
         Loaded xarray Dataset
     """
     if isinstance(dataset, str):
-        kwargs = {}
+        kwargs = {"decode_timedelta": True}
         if variables is not None:
             kwargs["variables"] = variables
         if chunks is not None:
