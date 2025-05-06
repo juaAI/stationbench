@@ -19,7 +19,8 @@ from stationbench.utils.plotting import geo_scatter
 
 LEAD_RANGES = {
     "Short term (6-48 hours)": slice("06:00:00", "48:00:00"),
-    "Mid term (3-7 days)": slice("72:00:00", "168:00:00"),
+    "Mid term (2-6 days)": slice("48:00:00", "168:00:00"),
+    "Long term (6-10 days)": slice("168:00:00", "240:00:00"),
 }
 
 logger = logging.getLogger(__name__)
