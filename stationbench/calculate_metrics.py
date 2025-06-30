@@ -235,7 +235,7 @@ def get_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--stations",
         type=str,
-        default="https://opendata.jua.sh/stationbench/meteostat_benchmark.zarr",
+        default="https://opendata.jua.ai/stationbench/meteostat_benchmark.zarr",
         help="Path to ground truth zarr dataset",
     )
     parser.add_argument(

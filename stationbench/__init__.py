@@ -13,7 +13,7 @@ def calculate_metrics(
     forecast: Union[str, xr.Dataset],
     stations: Union[
         str, xr.Dataset
-    ] = "https://opendata.jua.sh/stationbench/meteostat_benchmark.zarr",
+    ] = "https://opendata.jua.ai/stationbench/meteostat_benchmark.zarr",
     start_date: Union[str, datetime] = None,
     end_date: Union[str, datetime] = None,
     output: Optional[str] = None,
