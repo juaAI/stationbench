@@ -115,13 +115,22 @@ class PointBasedBenchmarking:
                     temporal_regions.append(temp_dataset)
 
                 # Concatenate datasets for each region
-                combined_temporal_regions = xr.concat(temporal_regions, dim="region")
+                combined_temporal_regions = xr.concat(
+                    temporal_regions,
+                    dim="region",
+                )
                 temporal_metrics.append(combined_temporal_regions)
 
             # Concatenate datasets for each metric
-            combined_temporal_metric = xr.concat(temporal_metrics, dim="metric")
+            combined_temporal_metric = xr.concat(
+                temporal_metrics,
+                dim="metric",
+            )
             temporal_metric_datasets.append(combined_temporal_metric)
-            combined_spatial_metric = xr.concat(spatial_metrics, dim="metric")
+            combined_spatial_metric = xr.concat(
+                spatial_metrics,
+                dim="metric",
+            )
             spatial_metric_datasets.append(combined_spatial_metric)
         return temporal_metric_datasets, spatial_metric_datasets
 

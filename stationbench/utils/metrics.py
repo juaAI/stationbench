@@ -5,6 +5,8 @@ import xarray as xr
 class Metric(ABC):
     """Base class for all metrics."""
 
+    is_ensemble: bool = False
+
     @abstractmethod
     def compute(self, forecast: xr.Dataset, ground_truth: xr.Dataset) -> xr.Dataset:
         """Compute metric between forecast and ground truth."""
@@ -56,7 +58,41 @@ class MBE(Metric):
         return xr.Dataset(mbe).expand_dims(metric=["mbe"])
 
 
+class CRPSEnsemble(Metric):
+    is_ensemble = True
+
+    def compute(self, forecast: xr.Dataset, ground_truth: xr.Dataset) -> xr.Dataset:
+        """Compute Continuous Ranked Probability Score for ensemble forecasts.
+
+        For each station (s) and lead time (l):
+        CRPS(s,l) = 1/T * sum_t[crps_ensemble(o_{s,t}, f_{s,t,l,:})]
+
+        where:
+        - t: time index
+        - T: total number of time steps
+        - f: ensemble forecast with member dimension
+        - o: observation (ground truth)
+
+        Uses scoringrules.crps_ensemble with the ensemble member dimension.
+        """
+        import scoringrules as sr
+
+        crps = {}
+        for var in forecast.data_vars:
+            crps[var] = xr.apply_ufunc(
+                sr.crps_ensemble,
+                ground_truth[var],
+                forecast[var],
+                input_core_dims=[[], ["member"]],
+                dask="parallelized",
+                output_dtypes=[float],
+            ).mean("init_time", skipna=True)
+
+        return xr.Dataset(crps).expand_dims(metric=["crps"])
+
+
 AVAILABLE_METRICS = {
     "rmse": RMSE(),
     "mbe": MBE(),
+    "crps": CRPSEnsemble(),
 }

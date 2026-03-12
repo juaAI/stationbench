@@ -265,6 +265,100 @@ def test_mbe_calculation(sample_forecast, sample_stations):
     )
 
 
+@pytest.fixture
+def sample_ensemble_forecast():
+    """Create a sample ensemble forecast dataset."""
+    times = pd.date_range("2022-01-01", "2022-01-02", freq="24h")
+    lead_times = pd.timedelta_range("0h", "24h", freq="24h")
+    stations = ["ST1"]
+    members = np.arange(5)
+    lats = [50.0]
+    lons = [5.0]
+
+    ds = xr.Dataset(
+        data_vars={
+            "2m_temperature": (
+                ("time", "prediction_timedelta", "station_id", "member"),
+                np.random.randn(
+                    len(times), len(lead_times), len(stations), len(members)
+                ),
+            ),
+            "10m_wind_speed": (
+                ("time", "prediction_timedelta", "station_id", "member"),
+                np.random.randn(
+                    len(times), len(lead_times), len(stations), len(members)
+                ),
+            ),
+        },
+        coords={
+            "time": times,
+            "prediction_timedelta": lead_times,
+            "station_id": stations,
+            "member": members,
+            "latitude": ("station_id", lats),
+            "longitude": ("station_id", lons),
+        },
+    )
+    return ds
+
+
+def test_ensemble_pipeline(sample_ensemble_forecast, sample_stations):
+    """Test the full pipeline with ensemble forecast includes CRPS."""
+    sr = pytest.importorskip("scoringrules")
+
+    # Rename dims to match post-prepare_forecast format
+    forecast = sample_ensemble_forecast.rename(
+        {"time": "init_time", "prediction_timedelta": "lead_time"}
+    )
+    forecast.coords["valid_time"] = forecast.init_time + forecast.lead_time
+
+    stations = sample_stations.copy()
+
+    benchmarks = generate_benchmarks(forecast=forecast, stations=stations)
+
+    assert "crps" in benchmarks.metric.values
+    assert "rmse" in benchmarks.metric.values
+    assert "mbe" in benchmarks.metric.values
+
+
+def test_crps_calculation(sample_ensemble_forecast, sample_stations):
+    """Test CRPS calculation with a known case: perfect ensemble should yield CRPS ~0."""
+    sr = pytest.importorskip("scoringrules")
+
+    forecast = sample_ensemble_forecast.rename(
+        {"time": "init_time", "prediction_timedelta": "lead_time"}
+    )
+    forecast.coords["valid_time"] = forecast.init_time + forecast.lead_time
+
+    # Set all ensemble members to the same value as observations
+    forecast["10m_wind_speed"][:] = 3.0
+    stations = sample_stations.copy()
+    stations["10m_wind_speed"][:] = 3.0
+
+    benchmarks = generate_benchmarks(forecast=forecast, stations=stations)
+
+    np.testing.assert_allclose(
+        benchmarks.sel(metric="crps")["10m_wind_speed"].values,
+        0.0,
+        atol=1e-6,
+        err_msg="CRPS should be ~0 for a perfect ensemble",
+    )
+
+
+def test_no_ensemble_skips_crps(sample_forecast, sample_stations):
+    """Test that CRPS is skipped when forecast has no member dimension."""
+    forecast = sample_forecast.copy()
+    forecast = forecast.rename({"time": "init_time"})
+    forecast = forecast.rename({"prediction_timedelta": "lead_time"})
+    forecast.coords["valid_time"] = forecast.init_time + forecast.lead_time
+
+    benchmarks = generate_benchmarks(forecast=forecast, stations=sample_stations)
+
+    assert "crps" not in benchmarks.metric.values
+    assert "rmse" in benchmarks.metric.values
+    assert "mbe" in benchmarks.metric.values
+
+
 def test_invalid_path():
     """Test handling of invalid file paths."""
     with pytest.raises(Exception):  # Should raise some kind of file not found error

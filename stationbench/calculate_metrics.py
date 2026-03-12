@@ -219,8 +219,11 @@ def generate_benchmarks(
     logger.info("Calculating metrics")
     metrics_list = []
 
+    has_ensemble = "member" in forecast.dims
     # Calculate each metric
     for metric in AVAILABLE_METRICS.values():
+        if metric.is_ensemble and not has_ensemble:
+            continue
         metrics_list.append(metric.compute(forecast, stations))
     # Merge all metrics into one dataset
     return xr.merge(metrics_list)
